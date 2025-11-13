@@ -14,19 +14,15 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// USE CHANNEL ID ONLY
+// USE CHANNEL ID
 const TEAMS_CHANNEL = "1389976721704489010";
 
-// Function: Make text BIG
-const bigText = (str) => {
-  return str
-    .toUpperCase()
-    .replace(/[A-Z]/g, (c) =>
-      String.fromCodePoint(c.charCodeAt(0) + 119743)
-    );
-};
+// BIG ASS TEXT MAKER
+function big(text) {
+  return `**__${text.toUpperCase()}__**`; // SUPER BOLD + UNDERLINE + HUGE FEEL
+}
 
-// BOT READY
+// READY
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
@@ -36,58 +32,66 @@ client.once('clientReady', async () => {
   const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
   if (!teamChan) return console.log("❌ Teams channel not found");
 
-  // Delete old messages
+  // DELETE old bot messages
   const msgs = await teamChan.messages.fetch();
   msgs.filter(m => m.author.id === client.user.id).forEach(m => m.delete());
 
-  // Button Embed
+  // MAIN PANEL
   const embed = new EmbedBuilder()
-    .setTitle("🏆 **TEAM REGISTRATION**")
-    .setDescription("Click the button below to register your team!")
+    .setTitle("🟨 **TEAM REGISTRATION PANEL**")
+    .setDescription("Choose an option below:")
     .setColor(0xFFD700);
 
-  const button = new ActionRowBuilder().addComponents(
+  const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("register_team")
       .setLabel("➕ Register Your Team")
+      .setStyle(ButtonStyle.Success),
+
+    new ButtonBuilder()
+      .setCustomId("need_team")
+      .setLabel("🔍 Look For a Team")
       .setStyle(ButtonStyle.Primary)
   );
 
-  await teamChan.send({ embeds: [embed], components: [button] });
+  await teamChan.send({ embeds: [embed], components: [row] });
 });
 
-// BUTTON + MODAL HANDLER
-client.on('interactionCreate', async (interaction) => {
+// INTERACTIONS HANDLER
+client.on("interactionCreate", async (interaction) => {
+
+  // BUTTON 1 — REGISTER TEAM
   if (interaction.isButton() && interaction.customId === "register_team") {
+    
     const modal = new ModalBuilder()
       .setCustomId("team_modal")
       .setTitle("Register Your Team");
 
     const teamName = new TextInputBuilder()
       .setCustomId("team_name")
-      .setLabel("📝 Team Name (Required)")
+      .setLabel("📝 Team Name ")
       .setStyle(TextInputStyle.Short)
       .setRequired(true);
 
-    const member1 = new TextInputBuilder()
+    const m1 = new TextInputBuilder()
       .setCustomId("m1")
       .setLabel("⭐ Member 1 ")
       .setStyle(TextInputStyle.Short)
       .setRequired(true);
 
-    const member2 = new TextInputBuilder()
+    const m2 = new TextInputBuilder()
       .setCustomId("m2")
       .setLabel("Member 2 ")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
 
-    const member3 = new TextInputBuilder()
+    const m3 = new TextInputBuilder()
       .setCustomId("m3")
       .setLabel("Member 3 ")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
 
-    const member45 = new TextInputBuilder()
+    const m45 = new TextInputBuilder()
       .setCustomId("m45")
       .setLabel("Members 4 & 5 (comma separated)")
       .setStyle(TextInputStyle.Short)
@@ -95,17 +99,28 @@ client.on('interactionCreate', async (interaction) => {
 
     modal.addComponents(
       new ActionRowBuilder().addComponents(teamName),
-      new ActionRowBuilder().addComponents(member1),
-      new ActionRowBuilder().addComponents(member2),
-      new ActionRowBuilder().addComponents(member3),
-      new ActionRowBuilder().addComponents(member45)
+      new ActionRowBuilder().addComponents(m1),
+      new ActionRowBuilder().addComponents(m2),
+      new ActionRowBuilder().addComponents(m3),
+      new ActionRowBuilder().addComponents(m45)
     );
 
     return interaction.showModal(modal);
   }
 
-  // MODAL SUBMIT
+  // BUTTON 2 — NEED TEAM
+  if (interaction.isButton() && interaction.customId === "need_team") {
+    const guild = interaction.guild;
+    const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
+
+    await teamChan.send(`🔔 **${interaction.user} is teamless!Poor Guy Someone invite him to a team!**`);
+    
+    return interaction.reply({ content: "📣 Announced!", ephemeral: true });
+  }
+
+  // TEAM MODAL SUBMIT
   if (interaction.isModalSubmit() && interaction.customId === "team_modal") {
+
     const guild = interaction.guild;
     const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
 
@@ -122,14 +137,13 @@ client.on('interactionCreate', async (interaction) => {
       const parts = raw45.split(",").map(s => s.trim());
       m4 = parts[0] || "—";
       m5 = parts[1] || "—";
-    } else if (raw45.trim() !== "") {
+    } else if (raw45.trim()) {
       m4 = raw45.trim();
     }
 
-    // FINAL PRETTY EMBED
     const embed = new EmbedBuilder()
-      .setTitle(`🏆 **${bigText(name)}**`)
-      .setColor(0xFFD700)
+      .setTitle(`🏆 ${big(name)}`)
+      .setColor(0x00FF66)
       .setDescription(
         `**Member 1:** ${m1}\n` +
         `**Member 2:** ${m2}\n` +
@@ -143,7 +157,7 @@ client.on('interactionCreate', async (interaction) => {
     await teamChan.send({ embeds: [embed] });
 
     await interaction.reply({
-      content: "✅ Your team has been posted!",
+      content: "✅ Team Posted!",
       ephemeral: true
     });
   }
