@@ -119,12 +119,6 @@ client.on("interactionCreate", async (interaction) => {
       .setCustomId("lf_modal")
       .setTitle("Looking For a Team");
 
-    const who = new TextInputBuilder()
-      .setCustomId("who")
-      .setLabel("Ping Yourself (type @username)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true);
-
     const about = new TextInputBuilder()
       .setCustomId("about")
       .setLabel("What are your cool things / about you?")
@@ -144,7 +138,6 @@ client.on("interactionCreate", async (interaction) => {
       .setRequired(true);
 
     modal.addComponents(
-      new ActionRowBuilder().addComponents(who),
       new ActionRowBuilder().addComponents(about),
       new ActionRowBuilder().addComponents(hours),
       new ActionRowBuilder().addComponents(timezone)
@@ -203,7 +196,6 @@ client.on("interactionCreate", async (interaction) => {
     const guild = interaction.guild;
     const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
 
-    const who = interaction.fields.getTextInputValue("who");
     const about = interaction.fields.getTextInputValue("about");
     const hours = interaction.fields.getTextInputValue("hours");
     const timezone = interaction.fields.getTextInputValue("timezone");
@@ -212,7 +204,7 @@ client.on("interactionCreate", async (interaction) => {
       .setTitle("🔍 **LOOKING FOR A TEAM**")
       .setColor(0x3498db)
       .setDescription(
-        `${who} is looking for a team. Poor guy, someone invite him!\n\n` +
+        `${interaction.user} is looking for a team! Poor guy, someone invite him!\n\n` +
         `**About Him:** ${about}\n\n` +
         `**Online Time:** ${hours}\n` +
         `**Timezone:** ${timezone}`
@@ -222,7 +214,7 @@ client.on("interactionCreate", async (interaction) => {
     await teamChan.send({ embeds: [embed] });
 
     return interaction.reply({
-      content: "📣 Your request has been posted!\n <@1094566631281270814> IS the goat frr",
+      content: "📣 Your request has been posted!",
       ephemeral: true
     });
   }
