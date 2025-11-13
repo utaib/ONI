@@ -14,10 +14,9 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// USE CHANNEL ID (100% reliable)
+// USE CHANNEL ID ONLY — SAFE
 const TEAMS_CHANNEL = "1389976721704489010";
 
-// BOT READY
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
@@ -27,11 +26,9 @@ client.once('clientReady', async () => {
   const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
   if (!teamChan) return console.log("❌ Teams channel not found");
 
-  // Delete old bot messages
   const msgs = await teamChan.messages.fetch();
   msgs.filter(m => m.author.id === client.user.id).forEach(m => m.delete());
 
-  // Button Embed
   const embed = new EmbedBuilder()
     .setTitle("🏆 **Team Registration**")
     .setDescription("Click the button below to register your team!")
@@ -47,14 +44,12 @@ client.once('clientReady', async () => {
   await teamChan.send({ embeds: [embed], components: [button] });
 });
 
-// BUTTON INTERACTION
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isButton() && interaction.customId === "register_team") {
     const modal = new ModalBuilder()
       .setCustomId("team_modal")
       .setTitle("Register Your Team");
 
-    // FORM INPUTS
     const teamName = new TextInputBuilder()
       .setCustomId("team_name")
       .setLabel("📝 Team Name")
@@ -70,56 +65,51 @@ client.on('interactionCreate', async (interaction) => {
     const member2 = new TextInputBuilder()
       .setCustomId("m2")
       .setLabel("Member 2 (Optional)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false);
+      .setStyle(TextInputStyle.Short);
 
     const member3 = new TextInputBuilder()
       .setCustomId("m3")
       .setLabel("Member 3 (Optional)")
+      .setStyle(TextInputStyle.Short);
+
+    const member45 = new TextInputBuilder()
+      .setCustomId("m45")
+      .setLabel("Members 4 & 5 (comma separated)")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
 
-    const member4 = new TextInputBuilder()
-      .setCustomId("m4")
-      .setLabel("Member 4 (Optional)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false);
-
-    const member5 = new TextInputBuilder()
-      .setCustomId("m5")
-      .setLabel("Member 5 (Optional)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false);
-
-    // Attach rows
     modal.addComponents(
       new ActionRowBuilder().addComponents(teamName),
       new ActionRowBuilder().addComponents(member1),
       new ActionRowBuilder().addComponents(member2),
       new ActionRowBuilder().addComponents(member3),
-      new ActionRowBuilder().addComponents(member4),
-      new ActionRowBuilder().addComponents(member5)
+      new ActionRowBuilder().addComponents(member45)
     );
 
     return interaction.showModal(modal);
   }
 
-  // FORM SUBMISSION
   if (interaction.isModalSubmit() && interaction.customId === "team_modal") {
     const guild = interaction.guild;
     const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
-
-    if (!teamChan)
-      return interaction.reply({ content: "⚠️ Teams channel not found.", ephemeral: true });
 
     const name = interaction.fields.getTextInputValue("team_name");
     const m1 = interaction.fields.getTextInputValue("m1");
     const m2 = interaction.fields.getTextInputValue("m2") || "—";
     const m3 = interaction.fields.getTextInputValue("m3") || "—";
-    const m4 = interaction.fields.getTextInputValue("m4") || "—";
-    const m5 = interaction.fields.getTextInputValue("m5") || "—";
 
-    // BEAUTIFUL EMBED
+    const m45raw = interaction.fields.getTextInputValue("m45");
+    let m4 = "—";
+    let m5 = "—";
+
+    if (m45raw && m45raw.includes(",")) {
+      const parts = m45raw.split(",").map(s => s.trim());
+      m4 = parts[0] || "—";
+      m5 = parts[1] || "—";
+    } else if (m45raw) {
+      m4 = m45raw;
+    }
+
     const embed = new EmbedBuilder()
       .setTitle(`🏆 Team: ${name}`)
       .setColor(0x4CAF50)
@@ -128,7 +118,7 @@ client.on('interactionCreate', async (interaction) => {
         { name: "Member 2", value: m2, inline: true },
         { name: "Member 3", value: m3, inline: true },
         { name: "Member 4", value: m4, inline: true },
-        { name: "Member 5", value: m5, inline: true }
+        { name: "Member 5", value: m5, inline: true },
       )
       .setFooter({ text: `Created by ${interaction.user.username}` })
       .setTimestamp();
@@ -142,5 +132,4 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// LOGIN
 client.login(process.env.TOKEN);
