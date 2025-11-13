@@ -204,7 +204,7 @@ client.on("interactionCreate", async (interaction) => {
       .setTitle("🔍 **LOOKING FOR A TEAM**")
       .setColor(0x3498db)
       .setDescription(
-        `${interaction.user} is looking for a team! Poor guy, someone invite him!\n\n` +
+        `${interaction.user} is looking for a team! Poor guy, someone invite them!\n\n` +
         `**About Him:** ${about}\n\n` +
         `**Online Time:** ${hours}\n` +
         `**Timezone:** ${timezone}`
@@ -221,3 +221,4 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.TOKEN);
+
