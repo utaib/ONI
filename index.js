@@ -17,6 +17,15 @@ const client = new Client({
 // USE CHANNEL ID ONLY
 const TEAMS_CHANNEL = "1389976721704489010";
 
+// Function: Make text BIG
+const bigText = (str) => {
+  return str
+    .toUpperCase()
+    .replace(/[A-Z]/g, (c) =>
+      String.fromCodePoint(c.charCodeAt(0) + 119743)
+    );
+};
+
 // BOT READY
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user.tag}`);
@@ -27,7 +36,7 @@ client.once('clientReady', async () => {
   const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
   if (!teamChan) return console.log("❌ Teams channel not found");
 
-  // Clean old messages
+  // Delete old messages
   const msgs = await teamChan.messages.fetch();
   msgs.filter(m => m.author.id === client.user.id).forEach(m => m.delete());
 
@@ -56,32 +65,34 @@ client.on('interactionCreate', async (interaction) => {
 
     const teamName = new TextInputBuilder()
       .setCustomId("team_name")
-      .setLabel("📝 Team Name")
+      .setLabel("📝 Team Name (Required)")
       .setStyle(TextInputStyle.Short)
       .setRequired(true);
 
     const member1 = new TextInputBuilder()
       .setCustomId("m1")
-      .setLabel("⭐ Member 1 (Required)")
+      .setLabel("⭐ Member 1 ")
       .setStyle(TextInputStyle.Short)
       .setRequired(true);
 
     const member2 = new TextInputBuilder()
       .setCustomId("m2")
-      .setLabel("Member 2 (Optional)")
-      .setStyle(TextInputStyle.Short);
+      .setLabel("Member 2 ")
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false);
 
     const member3 = new TextInputBuilder()
       .setCustomId("m3")
-      .setLabel("Member 3 (Optional)")
-      .setStyle(TextInputStyle.Short);
+      .setLabel("Member 3 ")
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false);
 
     const member45 = new TextInputBuilder()
       .setCustomId("m45")
       .setLabel("Members 4 & 5 (comma separated)")
-      .setStyle(TextInputStyle.Short);
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false);
 
-    // ADD ONLY 5 INPUTS (Discord limit)
     modal.addComponents(
       new ActionRowBuilder().addComponents(teamName),
       new ActionRowBuilder().addComponents(member1),
@@ -93,34 +104,32 @@ client.on('interactionCreate', async (interaction) => {
     return interaction.showModal(modal);
   }
 
-  // MODAL SUBMISSION
+  // MODAL SUBMIT
   if (interaction.isModalSubmit() && interaction.customId === "team_modal") {
     const guild = interaction.guild;
     const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
-    if (!teamChan)
-      return interaction.reply({ content: "⚠️ Teams channel not found.", ephemeral: true });
 
     const name = interaction.fields.getTextInputValue("team_name");
     const m1 = interaction.fields.getTextInputValue("m1");
     const m2 = interaction.fields.getTextInputValue("m2") || "—";
     const m3 = interaction.fields.getTextInputValue("m3") || "—";
 
-    const m45raw = interaction.fields.getTextInputValue("m45") || "";
+    const raw45 = interaction.fields.getTextInputValue("m45") || "";
     let m4 = "—";
     let m5 = "—";
 
-    if (m45raw.includes(",")) {
-      const parts = m45raw.split(",").map(s => s.trim());
+    if (raw45.includes(",")) {
+      const parts = raw45.split(",").map(s => s.trim());
       m4 = parts[0] || "—";
       m5 = parts[1] || "—";
-    } else if (m45raw.trim() !== "") {
-      m4 = m45raw.trim();
+    } else if (raw45.trim() !== "") {
+      m4 = raw45.trim();
     }
 
-    // CLEAN SMP-STYLE EMBED
+    // FINAL PRETTY EMBED
     const embed = new EmbedBuilder()
-      .setTitle(`🏆 **${name.toUpperCase()}**`)
-      .setColor(0x4CAF50)
+      .setTitle(`🏆 **${bigText(name)}**`)
+      .setColor(0xFFD700)
       .setDescription(
         `**Member 1:** ${m1}\n` +
         `**Member 2:** ${m2}\n` +
@@ -140,5 +149,4 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// LOGIN
 client.login(process.env.TOKEN);
