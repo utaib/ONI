@@ -125,7 +125,7 @@ client.on("interactionCreate", async (interaction) => {
 
     await teamChan.send({ embeds: [embed] });
 
-    return interaction.reply({ content: "📣 Announcement sent!", ephemeral: true });
+    return interaction.reply({ content: "📣 Announcement sent!\n<Stay Happy and not teamless", ephemeral: true });
   }
 
   // MODAL SUBMISSION
@@ -167,10 +167,11 @@ client.on("interactionCreate", async (interaction) => {
     await teamChan.send({ embeds: [embed] });
 
     return interaction.reply({
-      content: "✅ Team Posted!",
+      content: "✅ Team Posted!\n<@1094566631281270814> is the goat fr 🔥",
       ephemeral: true
     });
   }
 });
 
 client.login(process.env.TOKEN);
+
