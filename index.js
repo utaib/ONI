@@ -14,9 +14,10 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// USE CHANNEL ID ONLY — SAFE
+// USE CHANNEL ID ONLY
 const TEAMS_CHANNEL = "1389976721704489010";
 
+// BOT READY
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
@@ -26,11 +27,13 @@ client.once('clientReady', async () => {
   const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
   if (!teamChan) return console.log("❌ Teams channel not found");
 
+  // Clean old messages
   const msgs = await teamChan.messages.fetch();
   msgs.filter(m => m.author.id === client.user.id).forEach(m => m.delete());
 
+  // Button Embed
   const embed = new EmbedBuilder()
-    .setTitle("🏆 **Team Registration**")
+    .setTitle("🏆 **TEAM REGISTRATION**")
     .setDescription("Click the button below to register your team!")
     .setColor(0xFFD700);
 
@@ -44,6 +47,7 @@ client.once('clientReady', async () => {
   await teamChan.send({ embeds: [embed], components: [button] });
 });
 
+// BUTTON + MODAL HANDLER
 client.on('interactionCreate', async (interaction) => {
   if (interaction.isButton() && interaction.customId === "register_team") {
     const modal = new ModalBuilder()
@@ -75,9 +79,9 @@ client.on('interactionCreate', async (interaction) => {
     const member45 = new TextInputBuilder()
       .setCustomId("m45")
       .setLabel("Members 4 & 5 (comma separated)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false);
+      .setStyle(TextInputStyle.Short);
 
+    // ADD ONLY 5 INPUTS (Discord limit)
     modal.addComponents(
       new ActionRowBuilder().addComponents(teamName),
       new ActionRowBuilder().addComponents(member1),
@@ -89,36 +93,40 @@ client.on('interactionCreate', async (interaction) => {
     return interaction.showModal(modal);
   }
 
+  // MODAL SUBMISSION
   if (interaction.isModalSubmit() && interaction.customId === "team_modal") {
     const guild = interaction.guild;
     const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
+    if (!teamChan)
+      return interaction.reply({ content: "⚠️ Teams channel not found.", ephemeral: true });
 
     const name = interaction.fields.getTextInputValue("team_name");
     const m1 = interaction.fields.getTextInputValue("m1");
     const m2 = interaction.fields.getTextInputValue("m2") || "—";
     const m3 = interaction.fields.getTextInputValue("m3") || "—";
 
-    const m45raw = interaction.fields.getTextInputValue("m45");
+    const m45raw = interaction.fields.getTextInputValue("m45") || "";
     let m4 = "—";
     let m5 = "—";
 
-    if (m45raw && m45raw.includes(",")) {
+    if (m45raw.includes(",")) {
       const parts = m45raw.split(",").map(s => s.trim());
       m4 = parts[0] || "—";
       m5 = parts[1] || "—";
-    } else if (m45raw) {
-      m4 = m45raw;
+    } else if (m45raw.trim() !== "") {
+      m4 = m45raw.trim();
     }
 
+    // CLEAN SMP-STYLE EMBED
     const embed = new EmbedBuilder()
-      .setTitle(`🏆 Team: ${name}`)
+      .setTitle(`🏆 **${name.toUpperCase()}**`)
       .setColor(0x4CAF50)
-      .addFields(
-        { name: "⭐ Member 1", value: `**${m1}**`, inline: false },
-        { name: "Member 2", value: m2, inline: true },
-        { name: "Member 3", value: m3, inline: true },
-        { name: "Member 4", value: m4, inline: true },
-        { name: "Member 5", value: m5, inline: true },
+      .setDescription(
+        `**Member 1:** ${m1}\n` +
+        `**Member 2:** ${m2}\n` +
+        `**Member 3:** ${m3}\n` +
+        `**Member 4:** ${m4}\n` +
+        `**Member 5:** ${m5}`
       )
       .setFooter({ text: `Created by ${interaction.user.username}` })
       .setTimestamp();
@@ -132,4 +140,5 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// LOGIN
 client.login(process.env.TOKEN);
