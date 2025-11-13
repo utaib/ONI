@@ -79,19 +79,19 @@ client.on("interactionCreate", async (interaction) => {
 
     const m1 = new TextInputBuilder()
       .setCustomId("m1")
-      .setLabel("⭐ Member 1 ")
+      .setLabel("⭐ Member 1")
       .setStyle(TextInputStyle.Short)
       .setRequired(true);
 
     const m2 = new TextInputBuilder()
       .setCustomId("m2")
-      .setLabel("Member 2 ")
+      .setLabel("Member 2")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
 
     const m3 = new TextInputBuilder()
       .setCustomId("m3")
-      .setLabel("Member 3 ")
+      .setLabel("Member 3")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
 
@@ -112,23 +112,48 @@ client.on("interactionCreate", async (interaction) => {
     return interaction.showModal(modal);
   }
 
-  // BUTTON 2: LOOK FOR A TEAM
+  // BUTTON 2: LOOK FOR A TEAM → OPEN NEW MODAL
   if (interaction.isButton() && interaction.customId === "need_team") {
-    const guild = interaction.guild;
-    const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
+    
+    const modal = new ModalBuilder()
+      .setCustomId("lf_modal")
+      .setTitle("Looking For a Team");
 
-    const embed = new EmbedBuilder()
-      .setTitle("🔍 **LOOKING FOR A TEAM**")
-      .setColor(0x3498db)
-      .setDescription(`${interaction.user} is teamless! Poor Guy  someone invite him!`)
-      .setTimestamp();
+    const who = new TextInputBuilder()
+      .setCustomId("who")
+      .setLabel("Ping Yourself (type @username)")
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
 
-    await teamChan.send({ embeds: [embed] });
+    const about = new TextInputBuilder()
+      .setCustomId("about")
+      .setLabel("What are your cool things / about you?")
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true);
 
-    return interaction.reply({ content: "📣 Announcement sent!\n<Stay Happy and not teamless", ephemeral: true });
+    const hours = new TextInputBuilder()
+      .setCustomId("hours")
+      .setLabel("How long will you be online?")
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
+
+    const timezone = new TextInputBuilder()
+      .setCustomId("timezone")
+      .setLabel("Your Timezone (ex: IST, EST)")
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(who),
+      new ActionRowBuilder().addComponents(about),
+      new ActionRowBuilder().addComponents(hours),
+      new ActionRowBuilder().addComponents(timezone)
+    );
+
+    return interaction.showModal(modal);
   }
 
-  // MODAL SUBMISSION
+  // TEAM REGISTRATION SUBMISSION
   if (interaction.isModalSubmit() && interaction.customId === "team_modal") {
 
     const guild = interaction.guild;
@@ -171,7 +196,36 @@ client.on("interactionCreate", async (interaction) => {
       ephemeral: true
     });
   }
+
+  // LOOKING FOR A TEAM SUBMISSION
+  if (interaction.isModalSubmit() && interaction.customId === "lf_modal") {
+
+    const guild = interaction.guild;
+    const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
+
+    const who = interaction.fields.getTextInputValue("who");
+    const about = interaction.fields.getTextInputValue("about");
+    const hours = interaction.fields.getTextInputValue("hours");
+    const timezone = interaction.fields.getTextInputValue("timezone");
+
+    const embed = new EmbedBuilder()
+      .setTitle("🔍 **LOOKING FOR A TEAM**")
+      .setColor(0x3498db)
+      .setDescription(
+        `${who} is looking for a team. Poor guy, someone invite him!\n\n` +
+        `**About Him:** ${about}\n\n` +
+        `**Online Time:** ${hours}\n` +
+        `**Timezone:** ${timezone}`
+      )
+      .setTimestamp();
+
+    await teamChan.send({ embeds: [embed] });
+
+    return interaction.reply({
+      content: "📣 Your request has been posted!\n <@1094566631281270814> IS the goat frr",
+      ephemeral: true
+    });
+  }
 });
 
 client.login(process.env.TOKEN);
-
