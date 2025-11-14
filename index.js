@@ -14,56 +14,71 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// TEAM CHANNEL ID
-const TEAMS_CHANNEL = "1389976721704489010";
+// CHANNEL NAME + FALLBACK IDS
+const TEAMS_CHANNEL_NAME = "🫂┃teams";
+const FALLBACK_CHANNEL_IDS = [
+  "1389976721704489010", // server #1
+  "1425816192693571637"  // server #2
+];
 
 // BIG TEXT MAKER
 function big(text) {
   return `**__${text.toUpperCase()}__**`;
 }
 
+// Find channel by name OR fallback IDs
+function getTeamChannel(guild) {
+  return (
+    guild.channels.cache.find(c => c.name === TEAMS_CHANNEL_NAME) ||
+    guild.channels.cache.get(FALLBACK_CHANNEL_IDS[0]) ||
+    guild.channels.cache.get(FALLBACK_CHANNEL_IDS[1])
+  );
+}
+
 // READY
 client.once('clientReady', async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
-  const guild = client.guilds.cache.first();
-  if (!guild) return;
+  client.guilds.cache.forEach(async (guild) => {
+    const teamChan = getTeamChannel(guild);
+    if (!teamChan) return console.log(`❌ Teams channel not found in ${guild.name}`);
 
-  const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
-  if (!teamChan) return console.log("❌ Teams channel not found");
+    // CLEAN OLD BOT MESSAGES
+    const msgs = await teamChan.messages.fetch();
+    msgs.filter(m => m.author.id === client.user.id).forEach(m => m.delete());
 
-  // CLEAN OLD MESSAGES
-  const msgs = await teamChan.messages.fetch();
-  msgs.filter(m => m.author.id === client.user.id).forEach(m => m.delete());
+    // PANEL
+    const embed = new EmbedBuilder()
+      .setTitle("🟨 **TEAM REGISTRATION PANEL**")
+      .setColor(0xFFD700)
+      .setDescription(
+        "Choose an option below.\n\n" +
+        "**⚠️ Pinging Teammates:**\n" +
+        "Inside the form, type their name like `@username` so Discord pings them."
+      );
 
-  // PANEL
-  const embed = new EmbedBuilder()
-    .setTitle("🟨 **TEAM REGISTRATION PANEL**")
-    .setColor(0xFFD700)
-    .setDescription(
-      "Choose an option below.\n\n" +
-      "**⚠️ Pinging Teammates:**\n" +
-      "Inside the form, type their name like `@username` so Discord pings them."
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId("register_team")
+        .setLabel("➕ Register Your Team")
+        .setStyle(ButtonStyle.Success),
+
+      new ButtonBuilder()
+        .setCustomId("need_team")
+        .setLabel("🔍 Look For a Team")
+        .setStyle(ButtonStyle.Primary)
     );
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("register_team")
-      .setLabel("➕ Register Your Team")
-      .setStyle(ButtonStyle.Success),
-
-    new ButtonBuilder()
-      .setCustomId("need_team")
-      .setLabel("🔍 Look For a Team")
-      .setStyle(ButtonStyle.Primary)
-  );
-
-  await teamChan.send({ embeds: [embed], components: [row] });
+    await teamChan.send({ embeds: [embed], components: [row] });
+  });
 });
 
 
-// BUTTON HANDLER
+// INTERACTION HANDLER
 client.on("interactionCreate", async (interaction) => {
+  const guild = interaction.guild;
+  const teamChan = getTeamChannel(guild);
+  if (!teamChan) return interaction.reply({ content: "⚠️ Teams channel not found.", ephemeral: true });
 
   // BUTTON 1: REGISTER TEAM
   if (interaction.isButton() && interaction.customId === "register_team") {
@@ -85,13 +100,13 @@ client.on("interactionCreate", async (interaction) => {
 
     const m2 = new TextInputBuilder()
       .setCustomId("m2")
-      .setLabel("Member 2")
+      .setLabel("Member 2 (Optional)")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
 
     const m3 = new TextInputBuilder()
       .setCustomId("m3")
-      .setLabel("Member 3")
+      .setLabel("Member 3 (Optional)")
       .setStyle(TextInputStyle.Short)
       .setRequired(false);
 
@@ -112,9 +127,10 @@ client.on("interactionCreate", async (interaction) => {
     return interaction.showModal(modal);
   }
 
-  // BUTTON 2: LOOK FOR A TEAM → OPEN NEW MODAL
+
+  // BUTTON 2: LOOKING FOR A TEAM
   if (interaction.isButton() && interaction.customId === "need_team") {
-    
+
     const modal = new ModalBuilder()
       .setCustomId("lf_modal")
       .setTitle("Looking For a Team");
@@ -133,7 +149,7 @@ client.on("interactionCreate", async (interaction) => {
 
     const timezone = new TextInputBuilder()
       .setCustomId("timezone")
-      .setLabel("Your Timezone (ex: IST, EST)")
+      .setLabel("Your Timezone (Ex: IST, EST)")
       .setStyle(TextInputStyle.Short)
       .setRequired(true);
 
@@ -146,11 +162,9 @@ client.on("interactionCreate", async (interaction) => {
     return interaction.showModal(modal);
   }
 
+
   // TEAM REGISTRATION SUBMISSION
   if (interaction.isModalSubmit() && interaction.customId === "team_modal") {
-
-    const guild = interaction.guild;
-    const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
 
     const name = interaction.fields.getTextInputValue("team_name");
     const m1 = interaction.fields.getTextInputValue("m1");
@@ -190,11 +204,9 @@ client.on("interactionCreate", async (interaction) => {
     });
   }
 
-  // LOOKING FOR A TEAM SUBMISSION
-  if (interaction.isModalSubmit() && interaction.customId === "lf_modal") {
 
-    const guild = interaction.guild;
-    const teamChan = guild.channels.cache.get(TEAMS_CHANNEL);
+  // LOOKING FOR TEAM SUBMISSION
+  if (interaction.isModalSubmit() && interaction.customId === "lf_modal") {
 
     const about = interaction.fields.getTextInputValue("about");
     const hours = interaction.fields.getTextInputValue("hours");
@@ -204,7 +216,7 @@ client.on("interactionCreate", async (interaction) => {
       .setTitle("🔍 **LOOKING FOR A TEAM**")
       .setColor(0x3498db)
       .setDescription(
-        `${interaction.user} is looking for a team! Poor guy, someone invite them!\n\n` +
+        `${interaction.user} is looking for a team! Poor guy, someone invite him!\n\n` +
         `**About Him:** ${about}\n\n` +
         `**Online Time:** ${hours}\n` +
         `**Timezone:** ${timezone}`
@@ -221,4 +233,3 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 client.login(process.env.TOKEN);
-
