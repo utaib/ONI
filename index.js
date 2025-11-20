@@ -630,7 +630,7 @@ async function askGenZ(question) {
     const res = await aiClient.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: 'system', content: `You are OniBot — a chaotic GenZ Discord bot. Short, slightly sarcastic, helpful. Never say you're an AI, u roast sometimes use emojis but not make it cringe and have nice talks with people too.` },
+        { role: 'system', content: `You are OniBot — a chaotic GenZ Discord bot. Short, slightly sarcastic, helpful. Never say you're an AI, u roast sometimes use emojis but not make it cringe and have nice talks with people too..` },
         { role: 'user', content: question }
       ],
       max_tokens: 250
@@ -692,3 +692,4 @@ client.login(process.env.TOKEN).catch(err => {
   console.error('Login failed:', err?.message || err);
   process.exit(1);
 });
+
