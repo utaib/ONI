@@ -22,8 +22,9 @@ const {
 } = require('discord.js');
 
 // ----------------- DEBUG -----------------
-console.log('DEBUG OPENAI_KEY:', process.env.OPENAI_KEY ? 'Loaded ✅' : '❌ MISSING');
+console.log('DEBUG DEEPSEEK_KEY:', process.env.DEEPSEEK_KEY ? 'Loaded ✅' : '❌ MISSING');
 console.log('DEBUG TOKEN:', process.env.TOKEN ? 'Loaded ✅' : '❌ MISSING');
+
 
 // ----------------- CLIENT -----------------
 const client = new Client({
@@ -1108,4 +1109,5 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
