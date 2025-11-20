@@ -564,6 +564,97 @@ client.on('interactionCreate', async (interaction) => {
     try { if (interaction && !interaction.replied) await interaction.reply({ content: 'An error occurred.', ephemeral: true }); } catch(e){}
   }
 });
+// ----------------------------------------------
+// AI SYSTEM (Simple OniSMP + GenZ Chatbot)
+// ----------------------------------------------
+
+const { OpenAI } = require("openai");
+const ai = new OpenAI({
+    apiKey: process.env.OPENAI_KEY
+});
+
+// The Oni SMP lore answer (fixed output)
+const ONI_LORE = `
+**🟥 What is Oni SMP?**
+
+Every soul in the world of Oni is born with a secret connection to an ancient mask — relics forged during the first wars between fire, water, earth, light, and nature.
+
+These masks aren’t worn on the face… they bind to the spirit.
+
+A stormcaller may command thunder, a flamebearer may ignite the battlefield, and another may stand unshaken like the mountains. Every mask grants power — and demands consequence.
+
+But whispers speak of two forbidden masks… not born from nature but crafted by a lost, dangerous design. These masks don’t awaken normally — they require trials that shake the land itself.
+
+Oni SMP isn’t just survival.
+It’s fate, power, and spirit colliding in one world.
+`;
+
+// Ask OpenAI with Gen-Z vibes
+async function askGenZ(question) {
+    try {
+        const res = await ai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                {
+                    role: "system",
+                    content: `
+You are OniBot — a chaotic GenZ Discord bot.
+Personality:
+- Funny
+- Slightly sarcastic
+- Helpful but unserious
+- Sometimes roasts people
+- Emoji addict but not too cringe
+
+Rules:
+- Keep answers short.
+- NEVER mention being an AI.
+- If question is about Oni SMP, DO NOT answer — the other system handles it.
+`
+                },
+                { role: "user", content: question }
+            ],
+            max_tokens: 250
+        });
+
+        return res.choices[0].message.content;
+    } catch (e) {
+        console.log("AI ERROR:", e);
+        return "Bro my brain lagged 💀 ask again.";
+    }
+}
+
+// ----------------------------------------------
+// Natural Chat Trigger (Ping OR Keyword)
+// ----------------------------------------------
+client.on("messageCreate", async (msg) => {
+    if (msg.author.bot) return;
+
+    const content = msg.content.toLowerCase();
+    const botId = client.user.id;
+
+    // 1️⃣ If bot is pinged → respond to whatever they wrote
+    if (msg.mentions.has(botId)) {
+        const question = msg.content.replace(`<@${botId}>`, "").trim();
+
+        // Special Oni SMP trigger
+        if (question.includes("oni smp")) {
+            return msg.reply(ONI_LORE);
+        }
+
+        msg.channel.sendTyping();
+        return msg.reply(await askGenZ(question.length ? question : "say something"));
+    }
+
+    // 2️⃣ Keyword detection for Oni SMP
+    if (
+        content.includes("what is oni smp") ||
+        content.includes("oni smp lore") ||
+        content.includes("oni smp info")
+    ) {
+        return msg.reply(ONI_LORE);
+    }
+});
 
 // ---------------- LOGIN ----------------
 if (!process.env.TOKEN) {
@@ -574,3 +665,4 @@ client.login(process.env.TOKEN).catch(err => {
   console.error('Login failed:', err?.message || err);
   process.exit(1);
 });
+
