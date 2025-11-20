@@ -4,8 +4,16 @@
 // Node 18+, discord.js v14
 // ======================================================
 
+// FINAL index.js — All-in-one system
+
 const fs = require('fs');
 const path = require('path');
+
+// 🔍 DEBUG: Check if OPENAI_KEY is loaded
+console.log("DEBUG OPENAI_KEY:", process.env.OPENAI_KEY ? "Loaded ✅" : "❌ MISSING");
+
+// (rest of your code…)
+
 const {
   Client,
   GatewayIntentBits,
@@ -857,3 +865,4 @@ if (!process.env.TOKEN) {
 }
 
 client.login(process.env.TOKEN);
+
