@@ -967,66 +967,77 @@ client.on("interactionCreate", async (interaction) => {
     console.error("Slash command error:", err);
   }
 });
-// ----------------- AI CLIENT (OpenAI) -----------------
+// ===================================================================
+// 🧠 AI CLIENT — DeepSeek (FREE) — replaces OpenAI
+// ===================================================================
 let aiClient = null;
+
 try {
-  const { OpenAI } = require("openai");
-  if (process.env.OPENAI_KEY) {
-    aiClient = new OpenAI({ apiKey: process.env.OPENAI_KEY });
+  const OpenAI = require("openai");
+
+  if (process.env.DEEPSEEK_KEY) {
+    aiClient = new OpenAI({
+      apiKey: process.env.DEEPSEEK_KEY,
+      baseURL: "https://api.deepseek.com"
+    });
+
+    console.log("DeepSeek AI Loaded ✅");
   } else {
-    aiClient = null;
+    console.log("DEEPSEEK_KEY missing ❌ — AI disabled.");
   }
 } catch (err) {
-  console.log("OpenAI library missing — AI disabled.");
+  console.log("OpenAI library not found — AI disabled.");
   aiClient = null;
 }
 
-// ----------------- ONI SMP LORE -----------------
+// ===================================================================
+// 🟥 ONI SMP LORE
+// ===================================================================
 const ONI_LORE = `
 **What is Oni SMP?**
-Every soul in the world of Oni is born with a secret connection to an old mask. These masks are artifacts from the first conflicts between fire, water, earth, light, and nature. Each one awakens special powers when the bearer submits to its will; they are worn on the spirit rather than the face.
-The mask selects the warrior when they enter the Oni lands for the first time. No two souls are given the same path; one may be in charge of storms and rivers, another may rise with the unforgiving stone, and a third may burn with wild fire. The mask shapes fate rather than just giving strength. Every power has a consequence, and every ability has weight.
-Passive ornaments are not what the masks are. They throb with vitality, urging action. To use them is to accept their essence: light penetrates the darkness, water bends gracefully, fire rages with ferocity, and earth protects with tenacity. Over time, the bearer gains mastery over both their inner spirit and their gifts.
-However, rumors of rarer masks circulate. Two masks of unimaginable power, hidden away until their time comes, were not created by nature but rather by forbidden design. They are not freely provided. Trials, occurrences that tremble the land and summon champions are necessary to awaken them. These hidden masks test the very soul, while the common ones test courage.
+Every soul in the world of Oni is linked to an ancient elemental mask: Fire, Water, Thunder, Earth, Light, or Nature.
+These masks choose their bearer and shape their destiny. Powers grow with mastery — but every ability has a cost.
+Two forbidden masks exist, hidden behind world-shaking trials.
+Oni SMP = Survival + Destiny + Power.
 `;
 
-// ----------------- AI FUNCTION -----------------
+// ===================================================================
+// 🤖 GenZ AI Chat Function (DeepSeek)
+// ===================================================================
 async function askGenZ(question) {
-  if (!aiClient)
-    return "AI offline rn 💀 add OPENAI_KEY to enable AI.";
+  if (!aiClient) return "AI offline rn 💀 add `DEEPSEEK_KEY` to enable AI.";
 
   try {
     const res = await aiClient.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "deepseek-chat",
       messages: [
         {
           role: "system",
           content: `
-You are OniBot — a chaotic GenZ Discord bot.
+You are OniBot — chaotic GenZ Discord bot.
 Rules:
-- Short + sarcastic but helpful
-- No cringe
-- Light roast allowed
+- short & sarcastic
+- no cringe
+- light roast allowed
 - NEVER say you're an AI
-- Talk like GenZ but keep it readable
-- If someone mentions "oni smp", DO NOT explain it (bot will handle it manually)
-        `,
+- GenZ tone but readable
+- If user mentions "oni smp", DO NOT explain it (handled separately)
+`
         },
-        { role: "user", content: question },
+        { role: "user", content: question }
       ],
-      max_tokens: 180,
+      max_tokens: 200
     });
 
-    const ans = res?.choices?.[0]?.message?.content;
-    return ans || "My brain lagged 💀 say again.";
+    return res?.choices?.[0]?.message?.content || "Bro my wires crossed 💀";
   } catch (e) {
-    console.log("AI ERROR:", e.message);
-    return "My brain lagged 💀 try again.";
+    console.log("DeepSeek ERROR:", e);
+    return "AI tripped on a cable 💀 try again.";
   }
 }
 
 // ===================================================================
-// 🧠 MESSAGE HANDLER (Ping + Reply + Conversation + Keywords)
+// 📩 MESSAGE HANDLER — reply + ping + ignore @everyone
 // ===================================================================
 client.on("messageCreate", async (msg) => {
   try {
@@ -1036,21 +1047,17 @@ client.on("messageCreate", async (msg) => {
     const botId = client.user.id;
     const content = msg.content.toLowerCase();
 
-    // ---------------------------
-    // 🚫 IGNORE @everyone / @here
-    // ---------------------------
-    if (msg.mentions.everyone) return;
+    // 🚫 IGNORE @everyone and @here
+    if (msg.mentions.everyone || msg.content.includes("@here")) return;
 
-    // ---------------------------
-    // 1️⃣ REPLYING TO BOT MESSAGE
-    // ---------------------------
+    // 1️⃣ — REPLYING TO BOT
     if (msg.reference?.messageId) {
-      const ref = await msg.channel.messages
-        .fetch(msg.reference.messageId)
-        .catch(() => null);
+      let ref = null;
+      try {
+        ref = await msg.channel.messages.fetch(msg.reference.messageId);
+      } catch {}
 
-      if (ref && ref.author.id === botId) {
-        // Oni SMP handled separately
+      if (ref && ref.author?.id === botId) {
         if (content.includes("oni smp")) return msg.reply(ONI_LORE);
 
         msg.channel.sendTyping();
@@ -1058,9 +1065,7 @@ client.on("messageCreate", async (msg) => {
       }
     }
 
-    // ---------------------------
-    // 2️⃣ BOT PINGED
-    // ---------------------------
+    // 2️⃣ — BOT IS DIRECTLY PINGED (NOT @everyone)
     if (msg.mentions.has(botId, { ignoreEveryone: true, ignoreRoles: true })) {
       const cleaned = msg.content
         .replace(new RegExp(`<@!?${botId}>`, "g"), "")
@@ -1073,9 +1078,7 @@ client.on("messageCreate", async (msg) => {
       return msg.reply(await askGenZ(cleaned || "say something"));
     }
 
-    // ---------------------------
-    // 3️⃣ KEYWORD TRIGGERS (Oni SMP)
-    // ---------------------------
+    // 3️⃣ — KEYWORD TRIGGERS (Oni SMP)
     if (
       content.includes("what is oni smp") ||
       content.includes("oni smp lore") ||
@@ -1083,10 +1086,12 @@ client.on("messageCreate", async (msg) => {
     ) {
       return msg.reply(ONI_LORE);
     }
+
   } catch (err) {
-    console.log("MessageCreate error:", err.message);
+    console.log("Message handler error:", err.message);
   }
 });
+
 
 // ===================================================================
 // 🔐 LOGIN
@@ -1103,3 +1108,4 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
