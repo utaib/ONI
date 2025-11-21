@@ -20,7 +20,7 @@ const {
 } = require('discord.js');
 
 // ----------------- DEBUG -----------------
-console.log('DEBUG DEEPSEEK_KEY:', process.env.DEEPSEEK_KEY ? 'Loaded ✅' : '❌ MISSING');
+console.log('DEBUG OPENROUTER_KEY:', process.env.OPENROUTER_KEY ? 'Loaded ✅' : '❌ MISSING');
 console.log('DEBUG TOKEN:', process.env.TOKEN ? 'Loaded ✅' : '❌ MISSING');
 
 
@@ -981,8 +981,6 @@ try {
   // 3) OPENAI_KEY
   const apiKey =
     process.env.OPENROUTER_KEY ||
-    process.env.DEEPSEEK_KEY ||
-    process.env.OPENAI_KEY ||
     null;
 
   if (!apiKey) {
@@ -1128,6 +1126,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
