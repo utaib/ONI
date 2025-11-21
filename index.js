@@ -1,7 +1,5 @@
 // ======================================================
-// FINAL index.js — OniBot Ultra Edition
-// Teams + Moderation + AI Chat + /ask + Ping + Reply
-// Fully fixed version — no replying to @everyone/@here
+
 // ======================================================
 
 const fs = require('fs');
@@ -1109,5 +1107,6 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
