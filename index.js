@@ -573,15 +573,21 @@ client.on("interactionCreate", async (interaction) => {
       }
     };
 
-    // ----------------- /PING -----------------
-    if (cmd === "ping") {
-      const before = Date.now();
-      await interaction.reply({ content: "Pinging…", ephemeral: true });
-      const latency = Date.now() - before;
-      return interaction.editReply(
-        `🏓 Pong — ${latency}ms (WS: ${Math.round(client.ws.ping)}ms)`
-      );
-    }
+  // ----------------- /PING -----------------
+if (cmd === "ping") {
+  const before = Date.now();
+
+  // send a normal message (NOT ephemeral)
+  await interaction.reply("Pinging…");
+
+  const latency = Date.now() - before;
+
+  // follow up with normal message (not editReply)
+  return interaction.followUp(
+    `🏓 Pong — ${latency}ms (WS: ${Math.round(client.ws.ping)}ms)`
+  );
+}
+
 
     // ----------------- /SAY -----------------
     if (cmd === "say") {
@@ -664,15 +670,16 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     // ----------------- /ONI -----------------
-    if (cmd === "oni") {
-      const info =
-        `# **ONI STUDIOS | COMMUNITY**\n` +
-        `controls oni zodiac and hunter smps.\n\n` +
-        `Join: https://discord.gg/gr534aDsCg`;
+if (cmd === "oni") {
+  const info =
+    `# **ONI STUDIOS | COMMUNITY**\n` +
+    `controls oni zodiac and hunter smps.\n\n` +
+    `Join: https://discord.gg/gr534aDsCg`;
 
-      await interaction.user.send(info).catch(() => {});
-      return interaction.reply({ content: "Check your DMs!", ephemeral: true });
-    }
+  // Send as a normal message in the channel
+  return interaction.reply(info);
+}
+
 
     // =====================================================================
     // 🔥🔥 MODERATION COMMANDS — BAN / TEMPBAN / KICK / MUTE / UNMUTE / PURGE
@@ -1126,6 +1133,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
