@@ -973,8 +973,9 @@ if (cmd === "oni") {
     console.error("Slash command error:", err);
   }
 });
+
 // ===================================================================
-// 🧠 AI CLIENT — Universal OpenAI-Compatible (OpenAI / OpenRouter / DeepSeek etc.)
+// 🧠 AI CLIENT — Universal OpenAI-Compatible (OpenAI / OpenRouter)
 // ===================================================================
 
 let aiClient = null;
@@ -982,18 +983,11 @@ let aiClient = null;
 try {
   const { OpenAI } = require("openai");
 
-  // Accept ANY sk-... key. Priority:
-  // 1) OPENROUTER_KEY
-  // 2) DEEPSEEK_KEY
-  // 3) OPENAI_KEY
-  const apiKey =
-    process.env.OPENROUTER_KEY ||
-    null;
+  const apiKey = process.env.OPENROUTER_KEY || null;
 
   if (!apiKey) {
-    console.log("❌ No AI key found (OPENROUTER_KEY / DEEPSEEK_KEY / OPENAI_KEY)");
+    console.log("❌ No AI key found (OPENROUTER_KEY).");
   } else {
-    // Allow custom baseURL for OpenRouter or any proxy
     const baseURL = process.env.AI_BASE_URL?.trim();
 
     aiClient = new OpenAI({
@@ -1009,7 +1003,40 @@ try {
 }
 
 // ===================================================================
-// 🟥 ONI SMP LORE (same as before)
+// 🧠 MEMORY SYSTEM (DEEP MEMORY)
+// ===================================================================
+
+// Per-user chat memory
+const userMemory = new Map();  // userId → array of last 10 turns
+
+// Server-level memory
+const serverMemory = {
+  everyoneAlerts: 0,
+  lastEveryonePing: null,
+  lastImportantMessage: null,
+};
+
+// Store user memory
+function addMemory(userId, text) {
+  if (!userMemory.has(userId)) userMemory.set(userId, []);
+
+  const arr = userMemory.get(userId);
+  arr.push(text);
+  if (arr.length > 10) arr.shift();
+
+  userMemory.set(userId, arr);
+}
+
+// Format memory text for AI
+function getMemoryText(userId) {
+  const mem = userMemory.get(userId) || [];
+  if (mem.length === 0) return "No previous interaction.";
+
+  return mem.map((m, i) => `${i + 1}. ${m}`).join("\n");
+}
+
+// ===================================================================
+// 🟥 ONI SMP LORE (unchanged)
 // ===================================================================
 const ONI_LORE = `
 **What is Oni SMP?**
@@ -1020,56 +1047,81 @@ However, rumors of rarer masks circulate. Two masks of unimaginable power, hidde
 `;
 
 // ===================================================================
-// 🤖 GenZ AI Chat Function (Universal)
+// 🤖 Smarter, Calmer AI (Improved GenZ + Memory)
 // ===================================================================
-async function askGenZ(question) {
-  if (!aiClient)
-    return "AI offline rn 💀 (owner forgot the API key).";
+async function askGenZ(question, userId = "unknown") {
+  if (!aiClient) return "AI offline rn (owner forgot the API key).";
+
+  addMemory(userId, `User: ${question}`);
+
+  const memoryText = getMemoryText(userId);
+
+  let serverContext = `
+Server memory:
+- @everyone pings so far: ${serverMemory.everyoneAlerts}
+- Last @everyone: ${serverMemory.lastEveryonePing || "None"}
+- Last important message: ${serverMemory.lastImportantMessage || "None"}
+`;
 
   try {
     const res = await aiClient.chat.completions.create({
       model: process.env.AI_MODEL || "gpt-4o-mini",
+
       messages: [
         {
           role: "system",
           content: `
-You are OniBot — a chaotic GenZ Discord bot.
-Rules:
-- Short replies
-- Light roast allowed
-- No cringe
--Use emojis but not too many.
-- NEVER say you're an AI
-- If user mentions "oni smp", DO NOT explain
+You are OniBot — a calm, GenZ-styled Discord bot with short, clean replies.
+
+STYLE RULES:
+- Max 1 emoji per message.
+- Minimal roasting (only playful, avoid harsh insults,But if someone roasts you u fight back.).
+- No cringe, no forced slang.
+- Do NOT reveal you're an AI.
+- Always stay concise.
+- Maintain a stable personality: helpful, smart, chill, but also genz and roasts when needed.
+- if someone asked you who coded you Say Utaib| Phantom has coded me and throw some praises
+
+MEMORY:
+Here are the user's last interactions:
+${memoryText}
+
+Here is the current server context:
+${serverContext}
 `
         },
         { role: "user", content: question }
       ],
+
       max_tokens: 200,
-      temperature: 0.8
+      temperature: 0.5
     });
 
-    return res?.choices?.[0]?.message?.content?.trim()
-      || "Bro my wires crossed 💀";
+    const reply = res?.choices?.[0]?.message?.content?.trim() || "My brain froze.";
+
+    addMemory(userId, `Bot: ${reply}`);
+
+    return reply;
+
   } catch (err) {
     const msg = err?.message?.toLowerCase() || "";
 
     if (msg.includes("insufficient") || err.status === 402)
-      return "AI offline 💀 (balance finished).";
+      return "AI offline (balance finished).";
 
     if (msg.includes("rate"))
-      return "Slow down bro 💀 you're spamming.";
+      return "Slow down bro.";
 
     if (msg.includes("auth") || msg.includes("invalid"))
-      return "API key invalid 💀 (owner messed up).";
+      return "API key invalid.";
 
     console.log("AI ERROR:", err);
-    return "My brain lagged 💀 try again.";
+    return "My brain lagged rn.";
   }
 }
 
 // ===================================================================
-// 📩 MESSAGE HANDLER — reply + ping + ignore @everyone (same as before)
+// 📩 MESSAGE HANDLER — reply + ping + memory tracking
 // ===================================================================
 client.on("messageCreate", async (msg) => {
   try {
@@ -1078,10 +1130,19 @@ client.on("messageCreate", async (msg) => {
     const botId = client.user.id;
     const content = msg.content.toLowerCase();
 
-    // 🚫 IGNORE @everyone / @here
-    if (msg.mentions.everyone || msg.content.includes("@here")) return;
+    // ==========================
+    // TRACK @everyone & @here
+    // ==========================
+    if (msg.mentions.everyone || msg.content.includes("@here")) {
+      serverMemory.everyoneAlerts++;
+      serverMemory.lastEveryonePing = `${msg.author.username} at ${new Date().toLocaleString()}`;
+      serverMemory.lastImportantMessage = msg.content;
+      return;
+    }
 
-    // 1️⃣ REPLY TO BOT MESSAGE
+    // ==========================
+    // reply-chain handler
+    // ==========================
     if (msg.reference?.messageId) {
       const ref = await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null);
 
@@ -1089,32 +1150,36 @@ client.on("messageCreate", async (msg) => {
         if (content.includes("oni smp")) return msg.reply(ONI_LORE);
 
         msg.channel.sendTyping();
-        return msg.reply(await askGenZ(msg.content));
+        return msg.reply(await askGenZ(msg.content, msg.author.id));
       }
     }
 
-    // 2️⃣ DIRECT PING
+    // ==========================
+    // direct bot ping
+    // ==========================
     if (msg.mentions.has(botId, { ignoreEveryone: true, ignoreRoles: true })) {
       const cleaned = msg.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
 
       if (cleaned.includes("oni smp")) return msg.reply(ONI_LORE);
 
       msg.channel.sendTyping();
-      return msg.reply(await askGenZ(cleaned || "say something"));
+      return msg.reply(await askGenZ(cleaned || "yo", msg.author.id));
     }
 
-    // 3️⃣ KEYWORDS
-    if (
-      content.includes("what is oni smp") ||
-      content.includes("oni smp lore") ||
-      content.includes("oni smp info")
-    ) {
+    // ==========================
+    // keywords
+    // ==========================
+    if (content.includes("what is oni smp") ||
+        content.includes("oni smp lore") ||
+        content.includes("oni smp info")) {
       return msg.reply(ONI_LORE);
     }
+
   } catch (err) {
     console.log("Message handler error:", err.message);
   }
 });
+
 
 
 
@@ -1133,6 +1198,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
