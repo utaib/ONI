@@ -1187,13 +1187,3 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
-
-
-
-
-
-
-
-
-
-
