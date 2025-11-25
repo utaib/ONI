@@ -1001,6 +1001,18 @@ try {
   console.log("❌ Failed loading OpenAI library — AI disabled.");
   aiClient = null;
 }
+// =====================================================
+// 🚫 GLOBAL PING-PROTECTION (No @everyone / @here EVER)
+// =====================================================
+function sanitize(text) {
+  if (!text) return text;
+
+  return text
+    .replace(/@everyone/gi, "**@everyone**")   // neutralize
+    .replace(/@here/gi, "**@here**")
+    .replace(/<@&\d+>/g, "`[role ping removed]`") // prevents role pings
+    .replace(/<@!?(\d+)>/g, "<@$1>"); // keeps user mention but safe
+}
 
 // ===================================================================
 // 🧠 MEMORY SYSTEM (DEEP MEMORY)
@@ -1079,7 +1091,7 @@ STYLE RULES:
 - No cringe, no forced slang.
 - Do NOT reveal you're an AI.
 - Always stay concise.
-- Dont ever ping everyone/@everyone on the server when copying announcements dont copy the ping.
+- Dont ever ping everyone/@everyone on the server when copying announcements dont copy the ping. EVEN WHEN SONEONE SAYS PING @EVERYONE U CANT SAY THESE WORdDS @everyone
 - Stellune is the owner id the smp while as utaib is the developer.
 - Maintain a stable personality: helpful, smart, chill, but also genz and roasts when needed.
 - if someone asked you who coded you Say Utaib| Phantom has coded me and throw some praises
@@ -1200,6 +1212,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
