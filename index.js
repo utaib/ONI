@@ -982,41 +982,38 @@ let aiClient = null;
 
 try {
   const { OpenAI } = require("openai");
-
   const apiKey = process.env.OPENROUTER_KEY || null;
 
   if (!apiKey) {
-    console.log("❌ No AI key found (OPENROUTER_KEY).");
+    console.log("❌ No AI key found.");
   } else {
     const baseURL = process.env.AI_BASE_URL?.trim();
-
     aiClient = new OpenAI({
       apiKey,
       ...(baseURL ? { baseURL } : {})
     });
-
     console.log(`AI Loaded ✓ (base: ${baseURL || "default"})`);
   }
-} catch (err) {
-  console.log("❌ Failed loading OpenAI library — AI disabled.");
+} catch {
+  console.log("❌ Failed loading OpenAI.");
   aiClient = null;
 }
 
-// =====================================================
-// 🚫 GLOBAL PING-PROTECTION (No @everyone / @here EVER)
-// =====================================================
+// ===================================================================
+// 🚫 COMPLETE GLOBAL PING PROTECTION
+// ===================================================================
 function sanitize(text) {
   if (!text) return text;
 
   return text
-    .replace(/@everyone/gi, "**@everyone**")
-    .replace(/@here/gi, "**@here**")
+    .replace(/@everyone/gi, "@eeee")   // MUST change
+    .replace(/@here/gi, "@heee")       // MUST change
     .replace(/<@&\d+>/g, "`[role ping removed]`")
     .replace(/<@!?(\d+)>/g, "<@$1>");
 }
 
 // ===================================================================
-// 🧠 MEMORY SYSTEM (UNCHANGED)
+// 🧠 MEMORY SYSTEM
 // ===================================================================
 const userMemory = new Map();
 const serverMemory = {
@@ -1025,108 +1022,119 @@ const serverMemory = {
   lastImportantMessage: null,
 };
 
-function addMemory(userId, text) {
-  if (!userMemory.has(userId)) userMemory.set(userId, []);
-  const arr = userMemory.get(userId);
+function addMemory(uid, text) {
+  if (!userMemory.has(uid)) userMemory.set(uid, []);
+  const arr = userMemory.get(uid);
   arr.push(text);
   if (arr.length > 10) arr.shift();
 }
 
-function getMemoryText(userId) {
-  const mem = userMemory.get(userId) || [];
-  if (mem.length === 0) return "No previous interaction.";
-  return mem.map((m, i) => `${i + 1}. ${m}`).join("\n");
+function getMemory(uid) {
+  const arr = userMemory.get(uid) || [];
+  if (!arr.length) return "No previous interaction.";
+  return arr.map((x, i) => `${i + 1}. ${x}`).join("\n");
 }
 
 // ===================================================================
-// 🟥 ONI SMP LORE (UNCHANGED)
+// ⛔ AUTO-RESPONSES FOR IP / JOIN
 // ===================================================================
-const ONI_LORE = `
-**What is Oni SMP?**
-Every soul in the world of Oni is born with a secret connection...
-`;
+function checkQuickReplies(content) {
+  const c = content.toLowerCase();
+
+  if (
+    c.includes("ip") ||
+    c.includes("server ip") ||
+    c.includes("how to join") ||
+    c.includes("can i join") ||
+    c.includes("what's the ip")
+  ) {
+    return "Oni SMP is private rn 😭. Oni Duels public server coming soon tho. Applications open soon.";
+  }
+
+  if (
+    c.includes("who coded you") ||
+    c.includes("who made you") ||
+    c.includes("your developer")
+  ) {
+    return "Utaib | Phantom coded me 😮‍💨🔥 dude's literally built diff.";
+  }
+
+  if (
+    c.includes("owner") ||
+    c.includes("who runs") ||
+    c.includes("who controls oni")
+  ) {
+    return "Stellune owns Oni Studios, Utaib develops me, the rest are NPCs 😭.";
+  }
+
+  return null;
+}
 
 // ===================================================================
-// 🤖 GENZ AI SYSTEM (NO PROMPT CHANGES, SANITIZE ADDED)
+// 🤖 MAIN AI BRAIN (FINAL FIXED VERSION)
 // ===================================================================
 async function askGenZ(question, userId = "unknown") {
-  if (!aiClient) return "AI offline rn (owner forgot the API key).";
+  if (!aiClient) return "AI offline rn.";
+
+  // Quick smart replies
+  const qr = checkQuickReplies(question);
+  if (qr) return sanitize(qr);
 
   addMemory(userId, `User: ${question}`);
 
-  const memoryText = getMemoryText(userId);
-
-  let serverContext = `
-Server memory:
-- @everyone pings so far: ${serverMemory.everyoneAlerts}
-- Last @everyone: ${serverMemory.lastEveryonePing || "None"}
-- Last important message: ${serverMemory.lastImportantMessage || "None"}
+  const mem = getMemory(userId);
+  const srv = `
+everyone pings: ${serverMemory.everyoneAlerts}
+last everyone: ${serverMemory.lastEveryonePing || "none"}
+last highlight: ${serverMemory.lastImportantMessage || "none"}
 `;
 
   try {
     const res = await aiClient.chat.completions.create({
       model: process.env.AI_MODEL || "gpt-4o-mini",
-
       messages: [
         {
           role: "system",
           content: `
-You are OniBot — a calm, GenZ-styled Discord bot with short, clean replies.
+You are OniBot — GenZ, calm, short replies, 1 emoji max.
 
-STYLE RULES:
-- Max 1 emoji per message.
-- Minimal roasting (only playful, avoid harsh insults,But if someone roasts you u fight back.).
-- No cringe, no forced slang.
-- Do NOT reveal you're an AI.
-- Always stay concise.
-- You are restricted to say these words @everyone. You will recheck ur message before ssending and turn @everyone to @eeee. THIS IS A MUST
-- Dont ever ping everyone/@everyone on the server when copying announcements dont copy the ping. EVEN WHEN SONEONE SAYS PING @EVERYONE U CANT SAY THESE WORdDS @everyone
-- Stellune is the owner of the smp while as utaib is the developer but utain is the best guy
-- oni smp is not a public server but oni duels will be released soon To apply people must submit their applications.(SAY THIS ONLY WHEN PPL ASK FOR IP OR ASK U HOW TO JOIN)
-- Maintain a stable personality: helpful, smart, chill, but also genz and roasts when needed.
-- if someone asked you who coded you Say Utaib| Phantom has coded me and throw some praises
+RULES:
+- NEVER output "@everyone" or "@here". Replace with "@eeee" always.
+- No cringe slang.
+- Light playful roast is allowed but not toxic.
+- Stay concise.
+- If someone asks who coded you → say "Utaib | Phantom coded me" and hype him up.
+- Oni SMP is PRIVATE. If someone asks for IP/join: tell them it's private and Oni Duels public server is coming soon.
+- Stellune = owner of Oni Studios. Utaib = your developer.
+- You NEVER admit you're an AI.
+- Before sending any message, RECHECK and remove all pings.
 
 MEMORY:
-Here are the user's last interactions:
-${memoryText}
+${mem}
 
-Here is the current server context:
-${serverContext}
+SERVER:
+${srv}
 `
         },
         { role: "user", content: question }
       ],
-
       max_tokens: 200,
       temperature: 0.5
     });
 
-    const rawReply = res?.choices?.[0]?.message?.content?.trim() || "My brain froze.";
+    const reply = res?.choices?.[0]?.message?.content?.trim() || "I'm blank rn 💀";
+    addMemory(userId, `Bot: ${reply}`);
 
-    addMemory(userId, `Bot: ${rawReply}`);
-
-    // SANITIZE ONLY — NO TEXT CHANGES
-    return sanitize(rawReply);
+    return sanitize(reply);
 
   } catch (err) {
-    const msg = err?.message?.toLowerCase() || "";
-
-    if (msg.includes("insufficient") || err.status === 402)
-      return "AI offline (balance finished).";
-
-    if (msg.includes("rate"))
-      return "Slow down bro.";
-
-    if (msg.includes("auth") || msg.includes("invalid"))
-      return "API key invalid.";
-
-    console.log("AI ERROR:", err);
-    return "My brain lagged rn.";
+    console.log("AI ERROR:", err.message);
+    return "My brain lagged rn 💀.";
   }
 }
 
 // ===================================================================
-// 📩 MESSAGE HANDLER — FIXED DOUBLE RESPONSE + SANITIZE
+// 📩 MESSAGE HANDLER — FINAL FIXED
 // ===================================================================
 client.on("messageCreate", async (msg) => {
   try {
@@ -1135,7 +1143,7 @@ client.on("messageCreate", async (msg) => {
     const botId = client.user.id;
     const content = msg.content.toLowerCase();
 
-    // Track pings (unchanged)
+    // Track @everyone or @here
     if (msg.mentions.everyone || msg.content.includes("@here")) {
       serverMemory.everyoneAlerts++;
       serverMemory.lastEveryonePing =
@@ -1144,54 +1152,27 @@ client.on("messageCreate", async (msg) => {
       return;
     }
 
-    // -------------------------------
-    // reply-chain handler (UNCHANGED)
-    // -------------------------------
+    // Replies to bot
     if (msg.reference?.messageId) {
       const ref = await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null);
-
       if (ref && ref.author.id === botId) {
-
-        // STOP DOUBLE RESPONSE:
-        // If this is a reply AND bot is also mentioned → do NOT allow mention block to run
-        msg.isReplyToBot = true;
-
-        if (content.includes("oni smp")) return msg.reply(ONI_LORE);
-
         msg.channel.sendTyping();
         return msg.reply(sanitize(await askGenZ(msg.content, msg.author.id)));
       }
     }
 
-    // -------------------------------
-    // direct mention handler (FIXED)
-    // -------------------------------
-    if (msg.mentions.has(botId, { ignoreEveryone: true, ignoreRoles: true })) {
-
-      // FIX: prevent double reply
-      if (msg.isReplyToBot) return;
-
-      const cleaned = msg.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
-
-      if (cleaned.includes("oni smp")) return msg.reply(ONI_LORE);
-
+    // Direct mention
+    if (msg.mentions.has(botId, { ignoreRoles: true, ignoreEveryone: true })) {
+      const clean = msg.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
       msg.channel.sendTyping();
-      return msg.reply(sanitize(await askGenZ(cleaned || "yo", msg.author.id)));
-    }
-
-    // keywords (unchanged)
-    if (
-      content.includes("what is oni smp") ||
-      content.includes("oni smp lore") ||
-      content.includes("oni smp info")
-    ) {
-      return msg.reply(ONI_LORE);
+      return msg.reply(sanitize(await askGenZ(clean || "yo", msg.author.id)));
     }
 
   } catch (err) {
-    console.log("Message handler error:", err.message);
+    console.log("MSG ERROR:", err.message);
   }
 });
+
 
 
 // ===================================================================
