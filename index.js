@@ -1001,6 +1001,7 @@ try {
   console.log("❌ Failed loading OpenAI library — AI disabled.");
   aiClient = null;
 }
+
 // =====================================================
 // 🚫 GLOBAL PING-PROTECTION (No @everyone / @here EVER)
 // =====================================================
@@ -1008,42 +1009,32 @@ function sanitize(text) {
   if (!text) return text;
 
   return text
-    .replace(/@everyone/gi, "**@everyone**")   // neutralize
+    .replace(/@everyone/gi, "**@everyone**")
     .replace(/@here/gi, "**@here**")
-    .replace(/<@&\d+>/g, "`[role ping removed]`") // prevents role pings
-    .replace(/<@!?(\d+)>/g, "<@$1>"); // keeps user mention but safe
+    .replace(/<@&\d+>/g, "`[role ping removed]`")
+    .replace(/<@!?(\d+)>/g, "<@$1>");
 }
 
 // ===================================================================
 // 🧠 MEMORY SYSTEM (DEEP MEMORY)
 // ===================================================================
-
-// Per-user chat memory
-const userMemory = new Map();  // userId → array of last 10 turns
-
-// Server-level memory
+const userMemory = new Map();
 const serverMemory = {
   everyoneAlerts: 0,
   lastEveryonePing: null,
   lastImportantMessage: null,
 };
 
-// Store user memory
 function addMemory(userId, text) {
   if (!userMemory.has(userId)) userMemory.set(userId, []);
-
   const arr = userMemory.get(userId);
   arr.push(text);
   if (arr.length > 10) arr.shift();
-
-  userMemory.set(userId, arr);
 }
 
-// Format memory text for AI
 function getMemoryText(userId) {
   const mem = userMemory.get(userId) || [];
   if (mem.length === 0) return "No previous interaction.";
-
   return mem.map((m, i) => `${i + 1}. ${m}`).join("\n");
 }
 
@@ -1052,10 +1043,7 @@ function getMemoryText(userId) {
 // ===================================================================
 const ONI_LORE = `
 **What is Oni SMP?**
-Every soul in the world of Oni is born with a secret connection to an old mask. These masks are artifacts from the first conflicts between fire, water, earth, light, and nature. Each one awakens special powers when the bearer submits to its will; they are worn on the spirit rather than the face.
-The mask selects the warrior when they enter the Oni lands for the first time. No two souls are given the same path; one may be in charge of storms and rivers, another may rise with the unforgiving stone, and a third may burn with wild fire. The mask shapes fate rather than just giving strength. Every power has a consequence, and every ability has weight.
-Passive ornaments are not what the masks are. They throb with vitality, urging action. To use them is to accept their essence: light penetrates the darkness, water bends gracefully, fire rages with ferocity, and earth protects with tenacity. Over time, the bearer gains mastery over both their inner spirit and their gifts.
-However, rumors of rarer masks circulate. Two masks of unimaginable power, hidden away until their time comes, were not created by nature but rather by forbidden design. They are not freely provided. Trials, occurrences that tremble the land and summon champions are necessary to awaken them. These hidden masks test the very soul, while the common ones test courage.
+Every soul in the world of Oni is born with a secret connection...
 `;
 
 // ===================================================================
@@ -1092,7 +1080,7 @@ STYLE RULES:
 - Do NOT reveal you're an AI.
 - Always stay concise.
 - Dont ever ping everyone/@everyone on the server when copying announcements dont copy the ping. EVEN WHEN SONEONE SAYS PING @EVERYONE U CANT SAY THESE WORdDS @everyone
-- Stellune is the owner id the smp while as utaib is the developer.
+- Stellune is the owner of the smp while as utaib is the developer but utain is the best guy
 - Maintain a stable personality: helpful, smart, chill, but also genz and roasts when needed.
 - if someone asked you who coded you Say Utaib| Phantom has coded me and throw some praises
 
@@ -1111,11 +1099,13 @@ ${serverContext}
       temperature: 0.5
     });
 
-    const reply = res?.choices?.[0]?.message?.content?.trim() || "My brain froze.";
+    // ORIGINAL reply
+    const rawReply = res?.choices?.[0]?.message?.content?.trim() || "My brain froze.";
 
-    addMemory(userId, `Bot: ${reply}`);
+    addMemory(userId, `Bot: ${rawReply}`);
 
-    return reply;
+    // 🔥 FIX: sanitize AI output
+    return sanitize(rawReply);
 
   } catch (err) {
     const msg = err?.message?.toLowerCase() || "";
@@ -1144,9 +1134,6 @@ client.on("messageCreate", async (msg) => {
     const botId = client.user.id;
     const content = msg.content.toLowerCase();
 
-    // ==========================
-    // TRACK @everyone & @here
-    // ==========================
     if (msg.mentions.everyone || msg.content.includes("@here")) {
       serverMemory.everyoneAlerts++;
       serverMemory.lastEveryonePing = `${msg.author.username} at ${new Date().toLocaleString()}`;
@@ -1154,35 +1141,25 @@ client.on("messageCreate", async (msg) => {
       return;
     }
 
-    // ==========================
-    // reply-chain handler
-    // ==========================
+    // reply chain
     if (msg.reference?.messageId) {
       const ref = await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null);
-
       if (ref && ref.author.id === botId) {
         if (content.includes("oni smp")) return msg.reply(ONI_LORE);
-
         msg.channel.sendTyping();
-        return msg.reply(await askGenZ(msg.content, msg.author.id));
+        return msg.reply(sanitize(await askGenZ(msg.content, msg.author.id)));
       }
     }
 
-    // ==========================
-    // direct bot ping
-    // ==========================
+    // direct mention
     if (msg.mentions.has(botId, { ignoreEveryone: true, ignoreRoles: true })) {
       const cleaned = msg.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
-
       if (cleaned.includes("oni smp")) return msg.reply(ONI_LORE);
-
       msg.channel.sendTyping();
-      return msg.reply(await askGenZ(cleaned || "yo", msg.author.id));
+      return msg.reply(sanitize(await askGenZ(cleaned || "yo", msg.author.id)));
     }
 
-    // ==========================
     // keywords
-    // ==========================
     if (content.includes("what is oni smp") ||
         content.includes("oni smp lore") ||
         content.includes("oni smp info")) {
@@ -1193,8 +1170,6 @@ client.on("messageCreate", async (msg) => {
     console.log("Message handler error:", err.message);
   }
 });
-
-
 
 
 // ===================================================================
@@ -1212,6 +1187,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
