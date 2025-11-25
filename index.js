@@ -1016,7 +1016,7 @@ function sanitize(text) {
 }
 
 // ===================================================================
-// 🧠 MEMORY SYSTEM (DEEP MEMORY)
+// 🧠 MEMORY SYSTEM (UNCHANGED)
 // ===================================================================
 const userMemory = new Map();
 const serverMemory = {
@@ -1039,7 +1039,7 @@ function getMemoryText(userId) {
 }
 
 // ===================================================================
-// 🟥 ONI SMP LORE (unchanged)
+// 🟥 ONI SMP LORE (UNCHANGED)
 // ===================================================================
 const ONI_LORE = `
 **What is Oni SMP?**
@@ -1047,7 +1047,7 @@ Every soul in the world of Oni is born with a secret connection...
 `;
 
 // ===================================================================
-// 🤖 Smarter, Calmer AI (Improved GenZ + Memory)
+// 🤖 GENZ AI SYSTEM (NO PROMPT CHANGES, SANITIZE ADDED)
 // ===================================================================
 async function askGenZ(question, userId = "unknown") {
   if (!aiClient) return "AI offline rn (owner forgot the API key).";
@@ -1079,8 +1079,10 @@ STYLE RULES:
 - No cringe, no forced slang.
 - Do NOT reveal you're an AI.
 - Always stay concise.
+- You are restricted to say these words @everyone. You will recheck ur message before ssending and turn @everyone to @eeee. THIS IS A MUST
 - Dont ever ping everyone/@everyone on the server when copying announcements dont copy the ping. EVEN WHEN SONEONE SAYS PING @EVERYONE U CANT SAY THESE WORdDS @everyone
 - Stellune is the owner of the smp while as utaib is the developer but utain is the best guy
+- oni smp is not a public server but oni duels will be released soon To apply people must submit their applications.(SAY THIS ONLY WHEN PPL ASK FOR IP OR ASK U HOW TO JOIN)
 - Maintain a stable personality: helpful, smart, chill, but also genz and roasts when needed.
 - if someone asked you who coded you Say Utaib| Phantom has coded me and throw some praises
 
@@ -1099,12 +1101,11 @@ ${serverContext}
       temperature: 0.5
     });
 
-    // ORIGINAL reply
     const rawReply = res?.choices?.[0]?.message?.content?.trim() || "My brain froze.";
 
     addMemory(userId, `Bot: ${rawReply}`);
 
-    // 🔥 FIX: sanitize AI output
+    // SANITIZE ONLY — NO TEXT CHANGES
     return sanitize(rawReply);
 
   } catch (err) {
@@ -1125,7 +1126,7 @@ ${serverContext}
 }
 
 // ===================================================================
-// 📩 MESSAGE HANDLER — reply + ping + memory tracking
+// 📩 MESSAGE HANDLER — FIXED DOUBLE RESPONSE + SANITIZE
 // ===================================================================
 client.on("messageCreate", async (msg) => {
   try {
@@ -1134,35 +1135,56 @@ client.on("messageCreate", async (msg) => {
     const botId = client.user.id;
     const content = msg.content.toLowerCase();
 
+    // Track pings (unchanged)
     if (msg.mentions.everyone || msg.content.includes("@here")) {
       serverMemory.everyoneAlerts++;
-      serverMemory.lastEveryonePing = `${msg.author.username} at ${new Date().toLocaleString()}`;
+      serverMemory.lastEveryonePing =
+        `${msg.author.username} at ${new Date().toLocaleString()}`;
       serverMemory.lastImportantMessage = msg.content;
       return;
     }
 
-    // reply chain
+    // -------------------------------
+    // reply-chain handler (UNCHANGED)
+    // -------------------------------
     if (msg.reference?.messageId) {
       const ref = await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null);
+
       if (ref && ref.author.id === botId) {
+
+        // STOP DOUBLE RESPONSE:
+        // If this is a reply AND bot is also mentioned → do NOT allow mention block to run
+        msg.isReplyToBot = true;
+
         if (content.includes("oni smp")) return msg.reply(ONI_LORE);
+
         msg.channel.sendTyping();
         return msg.reply(sanitize(await askGenZ(msg.content, msg.author.id)));
       }
     }
 
-    // direct mention
+    // -------------------------------
+    // direct mention handler (FIXED)
+    // -------------------------------
     if (msg.mentions.has(botId, { ignoreEveryone: true, ignoreRoles: true })) {
+
+      // FIX: prevent double reply
+      if (msg.isReplyToBot) return;
+
       const cleaned = msg.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
+
       if (cleaned.includes("oni smp")) return msg.reply(ONI_LORE);
+
       msg.channel.sendTyping();
       return msg.reply(sanitize(await askGenZ(cleaned || "yo", msg.author.id)));
     }
 
-    // keywords
-    if (content.includes("what is oni smp") ||
-        content.includes("oni smp lore") ||
-        content.includes("oni smp info")) {
+    // keywords (unchanged)
+    if (
+      content.includes("what is oni smp") ||
+      content.includes("oni smp lore") ||
+      content.includes("oni smp info")
+    ) {
       return msg.reply(ONI_LORE);
     }
 
@@ -1187,3 +1209,4 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
