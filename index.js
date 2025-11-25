@@ -1079,6 +1079,8 @@ STYLE RULES:
 - No cringe, no forced slang.
 - Do NOT reveal you're an AI.
 - Always stay concise.
+- Dont ever ping everyone/@everyone on the server when copying announcements dont copy the ping.
+- Stellune is the owner id the smp while as utaib is the developer.
 - Maintain a stable personality: helpful, smart, chill, but also genz and roasts when needed.
 - if someone asked you who coded you Say Utaib| Phantom has coded me and throw some praises
 
@@ -1198,6 +1200,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
