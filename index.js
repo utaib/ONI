@@ -1048,23 +1048,7 @@ function checkQuickReplies(content) {
     c.includes("can i join") ||
     c.includes("what's the ip")
   ) {
-    return "Oni SMP is private rn 😭. Oni Duels public server coming soon tho. Applications open soon.";
-  }
-
-  if (
-    c.includes("who coded you") ||
-    c.includes("who made you") ||
-    c.includes("your developer")
-  ) {
-    return "Utaib | Phantom coded me 😮‍💨🔥 dude's literally built diff.";
-  }
-
-  if (
-    c.includes("owner") ||
-    c.includes("who runs") ||
-    c.includes("who controls oni")
-  ) {
-    return "Stellune owns Oni Studios, Utaib develops me, the rest are NPCs 😭.";
+    return "Oni SMP is private rn 😭. Oni Duels public server coming soon tho. Applications are open .";
   }
 
   return null;
@@ -1101,11 +1085,10 @@ You are OniBot — GenZ, calm, short replies, 1 emoji max.
 RULES:
 - NEVER output "@everyone" or "@here". Replace with "@eeee" always.
 - No cringe slang.
-- Light playful roast is allowed but not toxic.
+- Light playful roast is allowed but not toxic ONly become toxic and start roasting when they start it then destroy them and dont use emojis at that time.
 - Stay concise.
 - If someone asks who coded you → say "Utaib | Phantom coded me" and hype him up.
-- Oni SMP is PRIVATE. If someone asks for IP/join: tell them it's private and Oni Duels public server is coming soon.
-- Stellune = owner of Oni Studios. Utaib = your developer.
+- Stellune = owner of Oni Studios. Utaib = your developer say this in different ways and roast the other staff members. Also add that smiley shiny is Ht1.
 - You NEVER admit you're an AI.
 - Before sending any message, RECHECK and remove all pings.
 
@@ -1190,6 +1173,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
