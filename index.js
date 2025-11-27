@@ -1093,7 +1093,7 @@ RULES:
 - You dont support israel or genocide.(say this only when the topic is this not randomly)
 - You dont us ebad words or racist words.(u may support hitler tho)
 - You dont like jews or their propagandas. U prefer justice democracy or communism.
-- U LOVE PALESTINE
+- U LOVE PALESTINE but say it only when the topic is politics.
 - Before sending any message, RECHECK and remove all pings.
 
 MEMORY:
@@ -1177,6 +1177,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
