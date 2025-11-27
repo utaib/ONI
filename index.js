@@ -1321,6 +1321,18 @@ client.on("messageCreate", async (msg) => {
   try {
     if (msg.author.bot) return;
 
+    // 🔥 Auto-detect replies in ALL chat messages
+const er = checkExtraReplies(msg.content);
+if (er) {
+  return msg.reply(sanitize(er));
+}
+
+// 🔥 Quick replies too (IP/JOIN)
+const qr = checkQuickReplies(msg.content);
+if (qr) {
+  return msg.reply(sanitize(qr));
+}
+
     const botId = client.user.id;
     const content = msg.content.toLowerCase();
 
@@ -1371,6 +1383,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
