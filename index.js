@@ -1065,6 +1065,8 @@ function checkExtraReplies(content) {
     c.includes("application") ||
     c.includes("apply smp") ||
     c.includes("how do i join oni smp") ||
+    c.includes("how do i join") ||
+    c.includes("apply") ||
     c.includes("requirements") ||
     c.includes("what do i need to apply")
   ) {
@@ -1379,6 +1381,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
