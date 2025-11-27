@@ -1041,6 +1041,16 @@ function getMemory(uid) {
 function checkQuickReplies(content) {
   const c = content.toLowerCase();
 
+  if (
+    c.includes("ip") ||
+    c.includes("server ip") ||
+    c.includes("how to join") ||
+    c.includes("can i join") ||
+    c.includes("whats the ip") ||
+    c.includes("join server")
+  ) {
+    return "Oni SMP is private right now So You cant join without applying. Oni Duels public server coming soon tho. Applications are open.";
+  }
 function checkExtraReplies(content) {
   const c = content.toLowerCase();
 
@@ -1368,6 +1378,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
