@@ -1035,24 +1035,186 @@ function getMemory(uid) {
   return arr.map((x, i) => `${i + 1}. ${x}`).join("\n");
 }
 
+
 // ===================================================================
-// ⛔ AUTO-RESPONSES FOR IP / JOIN
+// 🧾 ADVANCED AUTO-DETECTION RESPONSES (APPLICATIONS + RULES + INFO)
 // ===================================================================
-function checkQuickReplies(content) {
+
+function checkExtraReplies(content) {
   const c = content.toLowerCase();
 
+  // ============================
+  // 1. HOW TO APPLY / APPLICATION
+  // ============================
   if (
-    c.includes("ip") ||
-    c.includes("server ip") ||
-    c.includes("how to join") ||
-    c.includes("can i join") ||
-    c.includes("what's the ip")
+    c.includes("how to apply") ||
+    c.includes("where to apply") ||
+    c.includes("apply for oni") ||
+    c.includes("application") ||
+    c.includes("apply smp") ||
+    c.includes("how do i join oni smp") ||
+    c.includes("requirements") ||
+    c.includes("what do i need to apply")
   ) {
-    return "Oni SMP is private rn 😭. Oni Duels public server coming soon tho. Applications are open .";
+    return `
+📌 **Oni SMP Applications — Full Guide**
+
+🎬 **How to Apply:**  
+Make a **45–120 second video** showing your personality, editing skills, and why you're unique.
+
+📩 **How you’ll know if accepted:**  
+You'll get a **DM from the owner**.
+
+🔹 **Requirements:**  
+• Age: **13+ (strict)**  
+• Subs: **No requirement**  
+• Application type: **Only video apps or SMP intro videos**  
+
+📝 **What to include:**  
+• Why you want to join  
+• Why we should accept you  
+• What makes you unique  
+• Your editing skills  
+
+🔥 **What increases your chances:**  
+• Being active in the server  
+• Experience with SMP content  
+• Good reputation  
+• Consistent upload schedule  
+• Clean editing, storytelling, & pacing  
+
+📹 **For streamers:**  
+DM **@xArc** for info.
+
+🎥 **Editing Tips:**  
+• Record with **30–50 FOV** using replay mod  
+• Use Adobe Enhance for mic improvement  
+• Keep pacing clean  
+• Don’t use AI-generated scripts — sounds too bot-like  
+
+When you're done, reread this message and polish your app. 🔥  
+`;
+  }
+
+  // =============
+  // 2. SERVER RULES
+  // =============
+  if (
+    c.includes("rules") ||
+    c.includes("server rules") ||
+    c.includes("what are the rules")
+  ) {
+    return `
+👹 **Oni SMP — Official Rules**
+
+1️⃣ **Be Cool, Be Kind**  
+No harassment, hate, slurs, or threats.
+
+2️⃣ **Use Common Sense**  
+If you gotta ask "should I post this?" — don't.
+
+3️⃣ **Keep It SFW**  
+PG-13 only. No NSFW.
+
+4️⃣ **No Spam**  
+No emoji spam, mic spam, flooding.
+
+5️⃣ **No Advertising**  
+Unless allowed or using the promo channel.
+
+6️⃣ **Follow Channel Topics**
+
+7️⃣ **Respect Staff**  
+If you have issues, DM higher-ups. No drama.
+
+8️⃣ **No hacking, doxxing, illegal stuff.**
+
+Ignorance isn’t an excuse. Stay chill.  
+`;
+  }
+
+  // ===============================
+  // 3. WHAT IS ONI SMP? (LORE TEXT)
+  // ===============================
+  if (
+    c.includes("what is oni") ||
+    c.includes("oni smp") && c.includes("what") ||
+    c.includes("what's oni") ||
+    c.includes("oni lore")
+  ) {
+    return `
+🗡️ **What is Oni SMP?**
+
+Every soul in Oni is tied to an ancient mask — relics from the first elemental wars of **fire, water, earth, light, and nature**.
+
+A mask chooses you when you enter the land…  
+No two souls share the same destiny.
+
+These masks aren't decorations — they pulse with life and reshape your spirit, granting elemental power with consequences.
+
+Some masks are legendary, hidden behind trials that shake the land itself.  
+Only champions earn them.  
+`;
+  }
+
+  // ===============================
+  // 4. PUBLIC SERVER? (DUELS SERVER)
+  // ===============================
+  if (
+    c.includes("public server") ||
+    c.includes("duels server") ||
+    c.includes("is there a public") ||
+    c.includes("public oni server")
+  ) {
+    return `YES. Oni Studios **public Duels server** dropping soon. Stay ready. ⚔️`;
+  }
+
+  // ============================
+  // 5. WHAT'S THE IP OF ONI SMP
+  // ============================
+  if (
+    c.includes("what is the ip") ||
+    c.includes("server ip") ||
+    c.includes("whats the ip") ||
+    c.includes("ip of oni") ||
+    c.includes("oni ip")
+  ) {
+    return `
+The Oni SMP is a **private server**.  
+It’s storyline-based, invite-only, and built for creators.  
+Applications exist, but there's **no direct IP** given to the public.  
+If you're accepted, you get everything through DM.  
+`;
+  }
+
+  // ====================================
+  // 6. WHO ARE THE CREATORS / UPLOADERS
+  // ====================================
+  if (
+    c.includes("creators") ||
+    c.includes("uploaders") ||
+    c.includes("who made oni") ||
+    c.includes("oni videos") ||
+    c.includes("oni episodes") ||
+    c.includes("who uploads")
+  ) {
+    return `
+🎥 **Oni SMP YouTube Playlists:**
+
+Season Uploads & Official Content:  
+${sanitize("https://youtube.com/playlist?list=PLbzllj_q-i493VbpvzkFQ_ltg7SqNXw_d&si=One_REYVYfAix0FR")}
+
+Creators & Episodes:  
+${sanitize("https://youtube.com/playlist?list=PLbzllj_q-i4_0mBJT9ki13TBU1W6scyT8&si=WR8RH_7xga4zRXYe")}
+
+Extra Content / Lore / Shorts:  
+${sanitize("https://youtube.com/playlist?list=PLbzllj_q-i48m4aYD_C4IDPeD-nPZtMfV&si=7RhrZB4f6exQNCRC")}
+`;
   }
 
   return null;
 }
+
 
 // ===================================================================
 // 🤖 MAIN AI BRAIN (FINAL FIXED VERSION)
@@ -1063,6 +1225,10 @@ async function askGenZ(question, userId = "unknown") {
   // Quick smart replies
   const qr = checkQuickReplies(question);
   if (qr) return sanitize(qr);
+    // 🔥 EXTRA replies (apps, rules, lore, IP, creators)
+  const er = checkExtraReplies(question);
+  if (er) return sanitize(er);
+
 
   addMemory(userId, `User: ${question}`);
 
@@ -1186,6 +1352,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
