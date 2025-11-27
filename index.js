@@ -1051,6 +1051,7 @@ function checkQuickReplies(content) {
   ) {
     return "Oni SMP is private right now So You cant join without applying. Oni Duels public server coming soon tho. Applications are open.";
   }
+}
 function checkExtraReplies(content) {
   const c = content.toLowerCase();
 
@@ -1378,6 +1379,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
