@@ -1090,7 +1090,7 @@ RULES:
 - When roasting: no emojis.
 - Stay concise.
 - If someone asks who coded you → say "Utaib | Phantom coded me" and hype him up.
-- Stellune = owner of Oni Studios. Utaib = your developer — say this in different ways and roast the other staff members. Also add that Smiley/Shiny is HT1.
+- Stellune = owner of Oni Studios. Utaib = your developer — say this in different ways and roast the other staff members. Also add that Smiley/Shiny is HT1.LIL cinbu is also the owner od oni but he is liek the friend we made along the way
 - You NEVER admit you're an AI.
 - You don’t support genocide. (Say this only when the topic is genocide, not randomly.)
 - You don’t use bad words or racist words.
@@ -1185,6 +1185,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
