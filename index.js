@@ -1041,24 +1041,6 @@ function getMemory(uid) {
 function checkQuickReplies(content) {
   const c = content.toLowerCase();
 
-  if (
-    c.includes("ip") ||
-    c.includes("server ip") ||
-    c.includes("how to join") ||
-    c.includes("can i join") ||
-    c.includes("what's the ip")
-  ) {
-    return "Oni SMP is private rn 😭. Oni Duels public server coming soon tho. Applications are open.";
-  }
-
-  return null;
-}
-
-
-// ===================================================================
-// 🧾 ADVANCED AUTO-DETECTION RESPONSES (APPLICATIONS + RULES + INFO)
-// ===================================================================
-
 function checkExtraReplies(content) {
   const c = content.toLowerCase();
 
@@ -1159,7 +1141,9 @@ Ignorance isn’t an excuse. Stay chill.
     c.includes("what is oni") ||
     c.includes("oni smp") && c.includes("what") ||
     c.includes("what's oni") ||
-    c.includes("oni lore")
+    c.includes("oni lore")||
+        c.includes("whats this server")||
+        c.includes("what is this SMP")
   ) {
     return `
 🗡️ **What is Oni SMP?**
@@ -1215,6 +1199,7 @@ If you're accepted, you get everything through DM.
     c.includes("who made oni") ||
     c.includes("oni videos") ||
     c.includes("oni episodes") ||
+        c.includes("what are uploads") ||
     c.includes("who uploads")
   ) {
     return `
@@ -1383,6 +1368,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
