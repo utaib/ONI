@@ -1035,6 +1035,25 @@ function getMemory(uid) {
   return arr.map((x, i) => `${i + 1}. ${x}`).join("\n");
 }
 
+// ===================================================================
+// ⛔ AUTO-RESPONSES FOR IP / JOIN (QUICK REPLIES)
+// ===================================================================
+function checkQuickReplies(content) {
+  const c = content.toLowerCase();
+
+  if (
+    c.includes("ip") ||
+    c.includes("server ip") ||
+    c.includes("how to join") ||
+    c.includes("can i join") ||
+    c.includes("what's the ip")
+  ) {
+    return "Oni SMP is private rn 😭. Oni Duels public server coming soon tho. Applications are open.";
+  }
+
+  return null;
+}
+
 
 // ===================================================================
 // 🧾 ADVANCED AUTO-DETECTION RESPONSES (APPLICATIONS + RULES + INFO)
@@ -1352,6 +1371,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
