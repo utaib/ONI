@@ -356,7 +356,7 @@ client.once("ready", async () => {
         m => m.author.id === client.user.id &&
         m.embeds[0] &&
         m.embeds[0].title &&
-        m.embeds[0].title.includes("Team Registration Panel")
+        m.embeds[0].title.includes("TEAM REGISTRATION PANEL")
       );
 
       for (const m of oldPanels.values()) {
@@ -365,7 +365,7 @@ client.once("ready", async () => {
 
       // SEND NEW PANEL
       const embed = new EmbedBuilder()
-        .setTitle("🪟 Team Registration Panel")
+        .setTitle("🟨 TEAM REGISTRATION PANEL")
         .setColor(0xFFD700)
         .setDescription("Choose an option below.");
 
@@ -1609,4 +1609,3 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
-
