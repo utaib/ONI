@@ -966,7 +966,7 @@ if (cmd === "oni") {
     if (cmd === "ask") {
       const q = interaction.options.getString("question");
       await interaction.deferReply();
-      const ans = await askGenZ(q);
+      const ans = await askGenZ(q, interaction.user.id, interaction.guild?.id || null);
       return interaction.editReply(ans);
     }
   } catch (err) {
@@ -1540,7 +1540,59 @@ ${srv}
   }
 }
 
+// ===================================================================
+// 📨 MESSAGE HANDLER — AI AUTOREPLY
+// ===================================================================
+client.on("messageCreate", async (msg) => {
+  try {
+    if (msg.author.bot) return;
 
+    const guildId = msg.guild?.id || null;
+
+    // 🔥 Auto-detect replies in ALL chat messages (Oni/Zodiac only)
+    const er = checkExtraReplies(msg.content, guildId);
+    if (er) {
+      return msg.reply(sanitize(er));
+    }
+
+    const qr = checkQuickReplies(msg.content, guildId);
+    if (qr) {
+      return msg.reply(sanitize(qr));
+    }
+
+    const botId = client.user.id;
+
+    // Track @everyone or @here
+    if (msg.mentions.everyone || msg.content.includes("@here")) {
+      serverMemory.everyoneAlerts++;
+      serverMemory.lastEveryonePing =
+        `${msg.author.username} at ${new Date().toLocaleString()}`;
+      serverMemory.lastImportantMessage = msg.content;
+      return;
+    }
+
+    // Replies to bot
+    if (msg.reference?.messageId) {
+      const ref = await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null);
+      if (ref && ref.author.id === botId) {
+        msg.channel.sendTyping();
+        const ans = await askGenZ(msg.content, msg.author.id, guildId);
+        return msg.reply(sanitize(ans));
+      }
+    }
+
+    // Direct mention
+    if (msg.mentions.has(botId, { ignoreRoles: true, ignoreEveryone: true })) {
+      const clean = msg.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
+      msg.channel.sendTyping();
+      const ans = await askGenZ(clean || "yo", msg.author.id, guildId);
+      return msg.reply(sanitize(ans));
+    }
+
+  } catch (err) {
+    console.log("MSG ERROR:", err.message);
+  }
+});
 
 // ===================================================================
 // 🔐 LOGIN
@@ -1557,4 +1609,3 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
-
