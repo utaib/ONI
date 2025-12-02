@@ -1021,8 +1021,7 @@ function sanitize(text) {
   return text
     .replace(/@everyone/gi, "@eeee")
     .replace(/@here/gi, "@heee")
-    .replace(/<@&\d+>/g, "`[role ping removed]`")
-    .replace(/<@!?(\d+)>/g, "<@$1>");
+
 }
 
 // ===================================================================
@@ -1666,5 +1665,6 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
