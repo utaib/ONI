@@ -1162,39 +1162,9 @@ When you're done, reread this message and polish your app. 🔥
       c.includes("can i partner")
     ) {
       return `
- **     🔥 O N I S M P — Partnership Guide**
-
-Step forward and show your server ad, warrior —
-but only if your numbers match the mask-tiers below:
-
-0–25 members
-• No pings. Your flame is still learning to burn.
-
-25–50 members
-• No pings, but partnerships open.
-A newcomer forging their first mask.
-
-50–150 members
-• Allowed: @partnerr 
-You’ve earned a spark — a whisper in the Oni halls.
-
-150–200 members
-• Allowed: @partnerrr
-Your presence is growing  your mask begins to glow.
-
-201–300 members
-• Allowed: @hre
-Now your voice echoes through the chambers.
-
-300–400 members
-• Allowed: @hre or @partner
-You hold weight a warrior recognized.
-
-400+ members
-• Allowed: @eeryoneee
-A full force — your mask roars, and the whole server listens.
-
-As the Oni network evolves, these requirements will shift like masks in firelight.
+ Hey Crazyy and brave adventurer.
+ We have closed out partnerships. You are too late. BUT with a small price of 1000$ u can get your own channel on this server.
+ Open a ticket to find out the real price if this one gave u a heart attack. XD
 `;
     }
 
@@ -1696,4 +1666,5 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
