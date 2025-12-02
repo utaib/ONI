@@ -1112,7 +1112,6 @@ function checkExtraReplies(content, guildId) {
       c.includes("how do i join oni smp") ||
       c.includes("how do i join") ||
       c.includes("apply") ||
-      c.includes("requirements") ||
       c.includes("what do i need to apply")
     ) {
       return `
@@ -1154,7 +1153,52 @@ DM **@xArc** for info.
 When you're done, reread this message and polish your app. 🔥   
 `;
     }
+// RULES
+    if (
+      c.includes("partner") ||
+      c.includes("partner requirements") ||
+       c.includes("offer") ||
+       c.includes("collaboarate") ||
+      c.includes("can i partner")
+    ) {
+      return `
+ **     🔥 O N I S M P — Partnership Guide**
 
+Step forward and show your server ad, warrior —
+but only if your numbers match the mask-tiers below:
+
+0–25 members
+• No pings. Your flame is still learning to burn.
+
+25–50 members
+• No pings, but partnerships open.
+A newcomer forging their first mask.
+
+50–150 members
+• Allowed: @partnerr 
+You’ve earned a spark — a whisper in the Oni halls.
+
+150–200 members
+• Allowed: @partnerrr
+Your presence is growing  your mask begins to glow.
+
+201–300 members
+• Allowed: @hre
+Now your voice echoes through the chambers.
+
+300–400 members
+• Allowed: @hre or @partner
+You hold weight a warrior recognized.
+
+400+ members
+• Allowed: @eeryoneee
+A full force — your mask roars, and the whole server listens.
+
+As the Oni network evolves, these requirements will shift like masks in firelight.
+`;
+    }
+
+      
     // RULES
     if (
       c.includes("rules") ||
@@ -1265,10 +1309,53 @@ ${sanitize("https://youtube.com/playlist?list=PLbzllj_q-i48m4aYD_C4IDPeD-nPZtMfV
   }
 
   // -----------------------------------------------------------
-  // 🔮 ZODIAC RESPONSES — PLACEHOLDERS (U FILL LATER)
+  // 🔮 ZODIAC RESPONSES
   // -----------------------------------------------------------
   if (isZodiac) {
 
+        if (
+      c.includes("partner") ||
+      c.includes("partner requirements") ||
+       c.includes("offer") ||
+       c.includes("collaboarate") ||
+      c.includes("can i partner")
+    ) {
+      return `
+      🌑 Z O D I A C S M P — Partnership Guide
+
+Send your server advertisement, Wanderer…
+But ensure your community aligns with the constellations below:
+
+0–25 members
+• Message only  no pings. A quiet spark in the sky.
+
+25–50 members
+• Still no pings. Partnerships allowed. Two stars crossing paths.
+
+50–150 members
+• Allowed: @parner
+Your server begins to glow — a small constellation forming.
+
+150–200 members
+• Allowed: @parter
+Your presence strengthens — a rising sign in the celestial map.
+
+201–300 members
+• Allowed: @hre
+A cluster bright enough to call nearby travelers.
+
+300–400 members
+• Allowed: @hee or @parner
+Your constellation is now seen across the night.
+
+400+ members
+• Allowed: @eeryone
+A full-blown supernova — the whole sky hears you.
+
+Requirements may shift as Zodiac grows and the stars realign.
+`;
+    }
+    
     if (
       c.includes("how to apply") ||
       c.includes("application") ||
@@ -1609,3 +1696,4 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
