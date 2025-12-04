@@ -338,11 +338,148 @@ async function registerCommands() {
     }
   }
 }
+// ===================================================================
+// 📌 AUTO POST RULES ON RESTART (ONLY BOT MESSAGES REMOVED)
+// ===================================================================
+
+const RULE_CHANNEL_1 = "1368618794821357675"; // SMP rules
+const RULE_CHANNEL_2 = "1425816135193989141"; // Discord rules
+
+// Embed for SMP Rules (Channel 1)
+function makeSmpRulesEmbed() {
+  return new EmbedBuilder()
+    .setTitle("📜 Oni SMP — Official Rules")
+    .setColor(0xff2222)
+    .setDescription(
+`Please be sure to read ALL rules before you play. Ignorance is not an excuse.
+
+**Rules For the Server**
+- USE COMMON SENSE
+- No Combat logging/Danger logging
+- No using Explosive PVP (unless used in a trap)
+- Max carts in a cart trap: 10
+- Follow all current kit rules
+- No debuff arrows in combat
+- No unfair advantages
+- No duping (string allowed)
+- No lag machines
+- No ban evasion
+- Team cap: 5 + 1 ally
+- Do not grief spawn / public builds / farms / pub base
+- No riptide in combat
+- No killing villagers
+- No pie chart
+- Minimap allowed (no entities / no cave mode)
+- IOUs must be honored
+- No crystal PvP
+- No elytra in combat
+- No respawn anchors
+- No double-ability spam
+- No health indicators
+- No killing builders
+- No naked killing
+- No loopholing
+- No re-gearing and returning to fight
+- No water running unless outnumbered
+- No F3+a
+- No freecam
+- No client commands
+- No minimap entities
+- No stream sniping
+- VC groups must be open for content`
+    );
+}
+
+// Discord rules embeds (Channel 2)
+const discordRules = [
+  new EmbedBuilder()
+    .setTitle("🌌 Zodiac SMP — Discord Rules")
+    .setColor(0x5533ff)
+    .setDescription(
+`Welcome to Oni/Zodiac Discord!
+Respect everyone and keep things safe.
+
+**1. Be Cool & Kind**
+No harassment, hate, or threats.
+
+**2. Use Common Sense**
+
+**3. Keep It SFW**
+PG-13 only.
+
+**4. No Spam**
+No flooding chat, mic spam, emoji spam.
+
+**5. No Advertising**
+Unless allowed.
+
+**6. Follow Channel Topics**
+
+**7. Respect Staff**
+
+**8. No hacking/doxing/illegal actions**`
+    ),
+
+  new EmbedBuilder()
+    .setColor(0x5533ff)
+    .setDescription(
+`**SMP RULES (continued)**  
+- USE COMMON SENSE  
+- No Combat logging  
+- No Explosive PvP (unless trap)  
+- No unfair advantages  
+- No duping (string allowed)  
+- No lag machines  
+- No ban evasion  
+- Team cap: 5 + 2 allies  
+- No griefing spawn/public/farms  
+- No pie chart  
+- No crystal/elytra PvP  
+- No respawn anchors  
+- No double ability stacking  
+- No health indicators  
+- No naked killing  
+- No loopholing  
+- No re-gearing  
+- No stream sniping`
+    )
+];
+
+// CLEAN BOT MESSAGES + POST RULES
+async function autoPostRules(guilds) {
+  for (const guild of guilds.values()) {
+    // ------------ CHANNEL 1 (SMP Rules) ------------
+    const ch1 = guild.channels.cache.get(RULE_CHANNEL_1);
+    if (ch1) {
+      try {
+        const msgs = await ch1.messages.fetch({ limit: 50 });
+        const botMsgs = msgs.filter(m => m.author.id === client.user.id);
+        for (const m of botMsgs.values()) await m.delete().catch(()=>{});
+        await ch1.send({ embeds: [makeSmpRulesEmbed()] });
+      } catch (e) { console.log("Rule CH1 error:", e.message); }
+    }
+
+    // ------------ CHANNEL 2 (Discord Rules) ------------
+    const ch2 = guild.channels.cache.get(RULE_CHANNEL_2);
+    if (ch2) {
+      try {
+        const msgs = await ch2.messages.fetch({ limit: 50 });
+        const botMsgs = msgs.filter(m => m.author.id === client.user.id);
+        for (const m of botMsgs.values()) await m.delete().catch(()=>{});
+
+        for (const emb of discordRules) {
+          await ch2.send({ embeds: [emb] });
+        }
+      } catch (e) { console.log("Rule CH2 error:", e.message); }
+    }
+  }
+}
 
 // ----------------- READY -----------------
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
   await registerCommands();
+await autoPostRules(client.guilds.cache);
 
   // Clean old panels and repost
   client.guilds.cache.forEach(async guild => {
@@ -1637,6 +1774,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
