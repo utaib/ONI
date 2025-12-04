@@ -390,58 +390,68 @@ function makeSmpRulesEmbed() {
     );
 }
 
-// Discord rules embeds (Channel 2)
 const discordRules = [
   new EmbedBuilder()
-    .setTitle("🌌 Zodiac SMP — Discord Rules")
-    .setColor(0x5533ff)
+    .setTitle("🌌✨ ZODIAC SMP — OFFICIAL RULEBOOK ✨🌌")
+    .setColor(0x8A2BE2) // Purple celestial
     .setDescription(
-`Welcome to Oni/Zodiac Discord!
-Respect everyone and keep things safe.
+`Welcome to **Zodiac SMP** — where the constellations guide the community.  
+Read these carefully. By being here, you agree to follow them.
 
-**1. Be Cool & Kind**
-No harassment, hate, or threats.
+## 🌙 DISCORD RULES
+**1️⃣ Be Cool & Kind**  
+No harassment, slurs, threats, or toxicity.
+**2️⃣ Use Common Sense**  
+If you think you shouldn't send it… don’t.
+**3️⃣ Keep It SFW (PG-13)**  
+No NSFW, gore, sexual jokes, or shock images.
+**4️⃣ No Spam**  
+No chat flooding, mic spam, emoji spam, or unnecessary pings.
+**5️⃣ No Advertising**  
+No server ads or self-promo unless approved.
+**6️⃣ Follow Channel Topics**  
+Use correct channels. Keep chat clean and in **English**.
+**7️⃣ Respect Staff**  
+If you disagree, open a ticket — don’t argue publicly.
+**8️⃣ No Hacking / Doxing / Illegal Activity**  
+Instant punishment.
+**9️⃣ No Punishment Evasion**  
+No alt accounts to bypass bans or mutes.
 
-**2. Use Common Sense**
+## 🌑 SMP RULES
 
-**3. Keep It SFW**
-PG-13 only.
-
-**4. No Spam**
-No flooding chat, mic spam, emoji spam.
-
-**5. No Advertising**
-Unless allowed.
-
-**6. Follow Channel Topics**
-
-**7. Respect Staff**
-
-**8. No hacking/doxing/illegal actions**`
-    ),
-
-  new EmbedBuilder()
-    .setColor(0x5533ff)
-    .setDescription(
-`**SMP RULES (continued)**  
 - USE COMMON SENSE  
-- No Combat logging  
-- No Explosive PvP (unless trap)  
+- No Combat logging / Danger logging  
+- No Explosive PvP (unless in a trap)  
+- Max 10 carts in a cart trap  
+- Follow all kit rules  
+- No debuff arrows in combat  
 - No unfair advantages  
-- No duping (string allowed)  
+- No duping (string allowed only)  
 - No lag machines  
 - No ban evasion  
-- Team cap: 5 + 2 allies  
-- No griefing spawn/public/farms  
+- Team cap: **5 + 2 allies**  
+- No griefing spawn / public builds / farms / pub base  
+- No riptide in combat  
+- Stealing & trapping bases = allowed  
+- No killing villagers  
 - No pie chart  
-- No crystal/elytra PvP  
+- Minimap allowed (no entities / no cave mode)  
+- IOUs must be honored  
+- No crystal PvP  
+- No elytra in combat  
 - No respawn anchors  
 - No double ability stacking  
 - No health indicators  
 - No naked killing  
 - No loopholing  
-- No re-gearing  
-- No stream sniping`
+- No re-gearing & coming back  
+- No stream sniping  
+- **VC groups must be open for content**
+
+---
+
+✨ **Stay respectful. Play fair. Keep the celestial realm peaceful.** 🌌`
     )
 ];
 
@@ -1774,6 +1784,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
