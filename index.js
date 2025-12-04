@@ -1403,32 +1403,21 @@ In the beginning, the skies above the world were ruled by Twelve Passive Zodiacs
 They watched silently, never interfering, but their presence kept the land stable and alive.
 
 These twelve were:
+Aries — The Flameborn Ram 
+Taurus — The Earthkeeper 
+Gemini — The Twin Wills
+Cancer — The Tidecaller 
+Leo — The Starclaw Lion
+Virgo — The Silent Maiden 
+Libra — The Balancebearer
+Scorpio — The Venomsting 
+Sagittarius — The Skyhunter 
 
-⭐ The Twelve Passive Zodiacs
+Capricorn — The Mountainborn
 
-Aries — The Flameborn Ram (bravery, raw fire power)
+Aquarius — The Stormbearer 
 
-Taurus — The Earthkeeper (unbreakable defense, stability)
-
-Gemini — The Twin Wills (duplication, duality)
-
-Cancer — The Tidecaller (water shaping, protection)
-
-Leo — The Starclaw Lion (radiance, leadership, courage)
-
-Virgo — The Silent Maiden (precision, purity, healing)
-
-Libra — The Balancebearer (order, weight manipulation)
-
-Scorpio — The Venomsting (poison, stealth, shadows)
-
-Sagittarius — The Skyhunter (speed, trajectory-bending)
-
-Capricorn — The Mountainborn (resilience, endurance)
-
-Aquarius — The Stormbearer (wind, tempests, energy flow)
-
-Pisces — The Dreamtide (illusions, empathy, spirit-magic)
+Pisces — The Dreamtide 
 
 Each Passive Zodiac held immense abilities, but they swore never to use them directly on the mortal world.
 Their role: maintain cosmic balance.
@@ -1442,25 +1431,8 @@ These beings held power far beyond the twelve.
 
 Solstice — The Twin Sun-Moon Sovereign
 
-Controls the shift between light and darkness.
-
-Herald of beginnings and endings.
-
 Oblivion — The Void Serpent
-
-Embodies nothingness, deletion, silence.
-
-Can swallow powers, memories, even fate itself.
-
-Equinox — The Time-Balancer
-
-Can rewind, pause, or accelerate fragments of reality.
-
-Eclipse — The Shadowed Sun
-
-Corrupted solar energy, destructive brilliance.
-
-These forces were never meant to enter the mortal world.
+and some more.
 
 🌠 The Celestial Fracture
 
@@ -1665,6 +1637,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
