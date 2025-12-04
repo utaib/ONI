@@ -20,8 +20,8 @@ const {
 } = require('discord.js');
 
 // ----------------- DEBUG -----------------
-//console.log('DEBUG DEEPSEEK_KEY:', process.env.DEEPSEEK_KEY ? 'Loaded ✅' : '❌ MISSING');
-//console.log('DEBUG TOKEN:', process.env.TOKEN ? 'Loaded ✅' : '❌ MISSING'); NOT REQUIRED SINCE PUTER.JAS
+console.log('DEBUG OPENROUTER_KEY:', process.env.OPENROUTER_KEY ? 'Loaded ✅' : '❌ MISSING');
+console.log('DEBUG TOKEN:', process.env.TOKEN ? 'Loaded ✅' : '❌ MISSING');
 
 
 // ----------------- CLIENT -----------------
@@ -975,17 +975,27 @@ if (cmd === "oni") {
 });
 
 // ===================================================================
-// 🧠 AI CLIENT — DeepSeek (Unlimited Free)
+// 🧠 AI CLIENT — Universal OpenAI-Compatible (OpenAI / OpenRouter)
 // ===================================================================
-const { Puter } = require("puter-js");
 
 let aiClient = null;
 
 try {
-  aiClient = new Puter();
-  console.log("Puter AI Loaded ✓ (free)");
-} catch (err) {
-  console.log("❌ Failed loading Puter AI:", err.message);
+  const { OpenAI } = require("openai");
+  const apiKey = process.env.OPENROUTER_KEY || null;
+
+  if (!apiKey) {
+    console.log("❌ No AI key found.");
+  } else {
+    const baseURL = process.env.AI_BASE_URL?.trim();
+    aiClient = new OpenAI({
+      apiKey,
+      ...(baseURL ? { baseURL } : {})
+    });
+    console.log(`AI Loaded ✓ (base: ${baseURL || "default"})`);
+  }
+} catch {
+  console.log("❌ Failed loading OpenAI.");
   aiClient = null;
 }
 
@@ -1465,13 +1475,13 @@ Yea there dumb havent uploaded. Or have they idrk. I am bot not a stalker.
 
   return null;
 }
+
 // ===================================================================
-// 🤖 MAIN AI — askGenZ() using Puter (FREE)
+// 🤖 MAIN AI — askGenZ()
 // ===================================================================
 async function askGenZ(question, userId = "unknown", guildId = null) {
-  if (!aiClient) return "AI offline rn 💀.";
+  if (!aiClient) return "AI offline rn.";
 
-  // Quick replies first
   const qr = checkQuickReplies(question, guildId);
   if (qr) return sanitize(qr);
 
@@ -1487,22 +1497,26 @@ last everyone: ${serverMemory.lastEveryonePing || "none"}
 last highlight: ${serverMemory.lastImportantMessage || "none"}
 `;
 
-  // SMP context
+  // Determine SMP context
   const isOni = ONI_SERVERS.includes(guildId);
   const isZodiac = ZODIAC_SERVERS.includes(guildId);
 
   let serverTag = "";
   if (isOni)
-    serverTag = "This chat is inside Oni SMP. Respond with Oni context ONLY.";
+    serverTag = "This chat is inside **Oni SMP**. Respond with Oni context ONLY. Never mention Zodiac.";
   else if (isZodiac)
-    serverTag = "This chat is inside Zodiac SMP. Respond with Zodiac context ONLY.";
+    serverTag = "This chat is inside **Zodiac SMP**. Respond with Zodiac context ONLY. Never mention Oni.";
   else
-    serverTag = "This is a normal server. Only talk about Oni/Zodiac if user mentions.";
+    serverTag = "This is a normal server. Do NOT mention Oni or Zodiac unless user asks.";
 
-  // System prompt for Puter
-  const systemPrompt = `
+  try {
+    const res = await aiClient.chat.completions.create({
+      model: process.env.AI_MODEL || "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `
 ${serverTag}
-
 
 You are OniStudios Bot — GenZ, calm, short replies, 1 emoji max.
 
@@ -1533,29 +1547,27 @@ RULES:
 MEMORY:
 ${mem}
 
-SERVER STATE:
+SERVER:
 ${srv}
-`;
+`
+        },
+        { role: "user", content: question }
+      ],
+      max_tokens: 200,
+      temperature: 0.5
+    });
 
-  try {
-    // 🧠 REAL PUTER AI REQUEST (FREE)
-    const response = await aiClient.ai.chat([
-      { role: "system", content: systemPrompt },
-      { role: "user", content: question }
-    ]);
-
-    let reply = response.message || "bro I'm blank rn 💀";
-
+    const reply = res?.choices?.[0]?.message?.content?.trim() || "I'm blank rn 💀";
     addMemory(userId, `Bot: ${reply}`);
 
     return sanitize(reply);
 
   } catch (err) {
-    console.log("AI ERROR:", err);
-    return "my brain lagged rn 💀";
+    console.log("AI ERROR:", err.message);
+    return "My brain lagged rn 💀.";
   }
 }
-//h
+
 // ===================================================================
 // 📨 MESSAGE HANDLER — AI AUTOREPLY
 // ===================================================================
@@ -1625,13 +1637,6 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
-
-
-
-
-
-
-
 
 
 
