@@ -1465,13 +1465,13 @@ Yea there dumb havent uploaded. Or have they idrk. I am bot not a stalker.
 
   return null;
 }
-
 // ===================================================================
-// 🤖 MAIN AI — askGenZ()
+// 🤖 MAIN AI — askGenZ() using Puter (FREE)
 // ===================================================================
 async function askGenZ(question, userId = "unknown", guildId = null) {
-  if (!aiClient) return "AI offline rn.";
+  if (!aiClient) return "AI offline rn 💀.";
 
+  // Quick replies first
   const qr = checkQuickReplies(question, guildId);
   if (qr) return sanitize(qr);
 
@@ -1487,19 +1487,19 @@ last everyone: ${serverMemory.lastEveryonePing || "none"}
 last highlight: ${serverMemory.lastImportantMessage || "none"}
 `;
 
-  // Determine SMP context
+  // SMP context
   const isOni = ONI_SERVERS.includes(guildId);
   const isZodiac = ZODIAC_SERVERS.includes(guildId);
 
   let serverTag = "";
   if (isOni)
-    serverTag = "This chat is inside **Oni SMP**. Respond with Oni context ONLY. Never mention Zodiac.";
+    serverTag = "This chat is inside Oni SMP. Respond with Oni context ONLY.";
   else if (isZodiac)
-    serverTag = "This chat is inside **Zodiac SMP**. Respond with Zodiac context ONLY. Never mention Oni.";
+    serverTag = "This chat is inside Zodiac SMP. Respond with Zodiac context ONLY.";
   else
-    serverTag = "This is a normal server. Do NOT mention Oni or Zodiac unless user asks.";
+    serverTag = "This is a normal server. Only talk about Oni/Zodiac if user mentions.";
 
-
+  // System prompt for Puter
   const systemPrompt = `
 ${serverTag}
 
@@ -1533,24 +1533,26 @@ RULES:
 MEMORY:
 ${mem}
 
-SERVER:
+SERVER STATE:
 ${srv}
-`
-        },
-        { role: "user", content: question }
-      ],
-      max_tokens: 200,
-      temperature: 0.5
-    });
+`;
 
-    const reply = res?.choices?.[0]?.message?.content?.trim() || "I'm blank rn 💀";
+  try {
+    // 🧠 REAL PUTER AI REQUEST (FREE)
+    const response = await aiClient.ai.chat([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: question }
+    ]);
+
+    let reply = response.message || "bro I'm blank rn 💀";
+
     addMemory(userId, `Bot: ${reply}`);
 
     return sanitize(reply);
 
   } catch (err) {
-    console.log("AI ERROR:", err.message);
-    return "My brain lagged rn 💀.";
+    console.log("AI ERROR:", err);
+    return "my brain lagged rn 💀";
   }
 }
 
@@ -1623,6 +1625,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
