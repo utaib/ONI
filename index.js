@@ -1513,7 +1513,7 @@ last highlight: ${serverMemory.lastImportantMessage || "none"}
 
   try {
     const res = await aiClient.chat.completions.create({
-model: "deepseek-chat",
+model: "deepseek-chat:free",
 
       messages: [
         {
@@ -1640,6 +1640,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
