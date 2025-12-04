@@ -1500,11 +1500,9 @@ last highlight: ${serverMemory.lastImportantMessage || "none"}
     serverTag = "This is a normal server. Do NOT mention Oni or Zodiac unless user asks.";
 
 
-      messages: [
-        {
-          role: "system",
-          content: `
+  const systemPrompt = `
 ${serverTag}
+
 
 You are OniStudios Bot — GenZ, calm, short replies, 1 emoji max.
 
@@ -1625,6 +1623,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
