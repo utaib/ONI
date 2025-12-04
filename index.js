@@ -20,7 +20,7 @@ const {
 } = require('discord.js');
 
 // ----------------- DEBUG -----------------
-console.log('DEBUG OPENROUTER_KEY:', process.env.OPENROUTER_KEY ? 'Loaded ✅' : '❌ MISSING');
+console.log('DEBUG DEEPSEEK_KEY:', process.env.DEEPSEEK_KEY ? 'Loaded ✅' : '❌ MISSING');
 console.log('DEBUG TOKEN:', process.env.TOKEN ? 'Loaded ✅' : '❌ MISSING');
 
 
@@ -975,29 +975,31 @@ if (cmd === "oni") {
 });
 
 // ===================================================================
-// 🧠 AI CLIENT — Universal OpenAI-Compatible (OpenAI / OpenRouter)
+// 🧠 AI CLIENT — DeepSeek (Unlimited Free)
 // ===================================================================
 
 let aiClient = null;
 
 try {
   const { OpenAI } = require("openai");
-  const apiKey = process.env.OPENROUTER_KEY || null;
+
+  const apiKey = process.env.DEEPSEEK_KEY || null;
 
   if (!apiKey) {
-    console.log("❌ No AI key found.");
+    console.log("❌ No DEEPSEEK_KEY found in environment.");
   } else {
-    const baseURL = process.env.AI_BASE_URL?.trim();
     aiClient = new OpenAI({
       apiKey,
-      ...(baseURL ? { baseURL } : {})
+      baseURL: "https://api.deepseek.com"  // REQUIRED FOR DEEPSEEK
     });
-    console.log(`AI Loaded ✓ (base: ${baseURL || "default"})`);
+
+    console.log("DeepSeek AI Loaded ✓");
   }
-} catch {
-  console.log("❌ Failed loading OpenAI.");
+} catch (err) {
+  console.log("❌ Failed loading DeepSeek AI:", err.message);
   aiClient = null;
 }
+
 
 // ===================================================================
 // 🔥 SERVER GROUPS — IMPORTANT
@@ -1511,7 +1513,8 @@ last highlight: ${serverMemory.lastImportantMessage || "none"}
 
   try {
     const res = await aiClient.chat.completions.create({
-      model: process.env.AI_MODEL || "gpt-4o-mini",
+model: "deepseek-chat",
+
       messages: [
         {
           role: "system",
@@ -1637,6 +1640,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
