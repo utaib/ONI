@@ -20,8 +20,8 @@ const {
 } = require('discord.js');
 
 // ----------------- DEBUG -----------------
-console.log('DEBUG DEEPSEEK_KEY:', process.env.DEEPSEEK_KEY ? 'Loaded ✅' : '❌ MISSING');
-console.log('DEBUG TOKEN:', process.env.TOKEN ? 'Loaded ✅' : '❌ MISSING');
+//console.log('DEBUG DEEPSEEK_KEY:', process.env.DEEPSEEK_KEY ? 'Loaded ✅' : '❌ MISSING');
+//console.log('DEBUG TOKEN:', process.env.TOKEN ? 'Loaded ✅' : '❌ MISSING'); NOT REQUIRED SINCE PUTER.JAS
 
 
 // ----------------- CLIENT -----------------
@@ -977,29 +977,17 @@ if (cmd === "oni") {
 // ===================================================================
 // 🧠 AI CLIENT — DeepSeek (Unlimited Free)
 // ===================================================================
+const { Puter } = require("puter-js");
 
 let aiClient = null;
 
 try {
-  const { OpenAI } = require("openai");
-
-  const apiKey = process.env.DEEPSEEK_KEY || null;
-
-  if (!apiKey) {
-    console.log("❌ No DEEPSEEK_KEY found in environment.");
-  } else {
-    aiClient = new OpenAI({
-      apiKey,
-      baseURL: "https://api.deepseek.com"  // REQUIRED FOR DEEPSEEK
-    });
-
-    console.log("DeepSeek AI Loaded ✓");
-  }
+  aiClient = new Puter();
+  console.log("Puter AI Loaded ✓ (free)");
 } catch (err) {
-  console.log("❌ Failed loading DeepSeek AI:", err.message);
+  console.log("❌ Failed loading Puter AI:", err.message);
   aiClient = null;
 }
-
 
 // ===================================================================
 // 🔥 SERVER GROUPS — IMPORTANT
@@ -1511,9 +1499,6 @@ last highlight: ${serverMemory.lastImportantMessage || "none"}
   else
     serverTag = "This is a normal server. Do NOT mention Oni or Zodiac unless user asks.";
 
-  try {
-    const res = await aiClient.chat.completions.create({
-model: "deepseek-chat:free",
 
       messages: [
         {
@@ -1640,6 +1625,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
