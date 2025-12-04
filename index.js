@@ -1555,7 +1555,7 @@ ${srv}
     return "my brain lagged rn 💀";
   }
 }
-
+//h
 // ===================================================================
 // 📨 MESSAGE HANDLER — AI AUTOREPLY
 // ===================================================================
@@ -1625,6 +1625,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
