@@ -1403,19 +1403,23 @@ client.on("interactionCreate", async (interaction) => {
       }
 
       // STAFF APPLICATION BUTTON
-      if (id === "ticket_staff_apply") {
-        const cfg = TICKET_PANEL_CONFIG[String(interaction.channelId)];
-        console.log("STAFF APPLY → PANEL:", interaction.channelId, "CFG:", cfg);
+if (id === "ticket_staff_apply") {
+    // FIXED: Detect panel using message.channelId (the panel’s channel)
+    const panelId = String(interaction.message?.channelId || interaction.channelId);
+    const cfg = TICKET_PANEL_CONFIG[panelId];
 
-        if (!cfg || cfg.type !== "multi") {
-          return interaction.reply({
-            content: "Staff applications are not available here.",
-            ephemeral: true
-          });
-        }
+    console.log("STAFF APPLY → PANEL:", panelId, "CFG:", cfg);
 
-        return startStaffApplication(interaction);
-      }
+    if (!cfg || cfg.type !== "multi") {
+      return interaction.reply({
+        content: "Staff applications are not available here.",
+        ephemeral: true
+      });
+    }
+
+    return startStaffApplication(interaction);
+}
+
 
       // STAFF APPLICATION DECISION BUTTONS
       if (id.startsWith("staff_app_decide_")) {
@@ -2657,6 +2661,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
