@@ -1237,10 +1237,12 @@ async function handleStaffAppPages(interaction) {
     });
   }
 
-  // PAGE 2 MODAL OPENED WHEN USER CLICKS BUTTON
-  if (interaction.customId === "staff_app_continue_p2") {
-    return interaction.showModal(buildStaffAppPage2());
-  }
+// PAGE 2 BUTTON (continue)
+if (interaction.customId === "staff_app_continue_p2") {
+  await interaction.showModal(buildStaffAppPage2());
+  return; // IMPORTANT FIX - stops other handlers from firing
+}
+
 
   // PAGE 2 SUBMIT → FINAL APPLICATION
   if (interaction.customId === "staff_app_page2") {
@@ -2677,6 +2679,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
