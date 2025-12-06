@@ -485,6 +485,8 @@ async function autoPostRules(guilds) {
   }
 }
 
+
+
 // ----------------- READY -----------------
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
@@ -535,13 +537,13 @@ await autoPostRules(client.guilds.cache);
     }
   });
 });
-
 // ===================================================================
 // 🎟️ TICKETS + APPLICATION SYSTEM (FIXED BY UTAIB FF & CHATGPT BRO)
 // ===================================================================
 
 // PANEL + ROUTING CONFIG
 const TICKET_PANEL_CONFIG = {
+  // SUPPORT-ONLY PANELS
   "1435290538793238618": {
     type: "support-only",
     transcriptChannelId: "1440923536809136209"
@@ -551,6 +553,7 @@ const TICKET_PANEL_CONFIG = {
     transcriptChannelId: "1440923536838623302"
   },
 
+  // MULTI PANELS (SUPPORT + PARTNERSHIP + STAFF APPS)
   "1368336173990154381": {
     type: "multi",
     transcriptChannelId: "1440928986409603213",
@@ -567,15 +570,23 @@ const SUPPORT_CATEGORY_NAME = "Tickets";
 const PARTNERSHIP_CATEGORY_NAME = "Partnerships";
 const ARCHIVE_CATEGORY_NAME = "Archived Tickets";
 
+// 3 days
 const TICKET_INACTIVITY_MS = 3 * 24 * 60 * 60 * 1000;
+
+// OPTIONAL: staff ping role (set to role ID if you want ping on new tickets)
+const STAFF_PING_ROLE_ID = null; // e.g. "123456789012345678"
 
 DATA.tickets = DATA.tickets || {};
 DATA.partialStaffApps = DATA.partialStaffApps || {};
-DATA.staffPanels = DATA.staffPanels || {}; // stores which panel user started on
+DATA.staffPanels = DATA.staffPanels || {}; // which panel user started on
 
 // ================================================================
-// CATEGORY HELPERS
+// HELPERS
 // ================================================================
+function clean(s) {
+  return (s || "").trim().replace(/\n/g, " ").replace(/\s+/g, " ");
+}
+
 async function ensureTicketCategory(guild, name) {
   if (!guild) return null;
   let cat = guild.channels.cache.find(c => c.type === 4 && c.name === name);
@@ -593,8 +604,12 @@ async function ensureArchiveCategory(guild) {
   return ensureTicketCategory(guild, ARCHIVE_CATEGORY_NAME);
 }
 
+function getPanelConfigFromInteraction(interaction) {
+  return TICKET_PANEL_CONFIG[String(interaction.channelId)];
+}
+
 // ================================================================
-// FIXED: POST TICKET PANELS (NO MORE REPOST SPAM)
+// PANEL POSTING (NO REPOST SPAM)
 // ================================================================
 async function postTicketPanelsForGuild(guild) {
   if (!guild?.available) return;
@@ -607,7 +622,7 @@ async function postTicketPanelsForGuild(guild) {
       const msgs = await channel.messages.fetch({ limit: 20 });
       const old = msgs.filter(m => m.author.id === client.user.id);
 
-      // delete only ONCE
+      // if bot already posted something here, skip
       if (old.size > 0) continue;
 
       // SUPPORT-ONLY PANEL
@@ -615,7 +630,11 @@ async function postTicketPanelsForGuild(guild) {
         const embed = new EmbedBuilder()
           .setTitle("🆘 Help & Support")
           .setColor(0x3498db)
-          .setDescription("Click to open a **support ticket**.");
+          .setDescription(
+            "Need help with **anything**?\n" +
+            "Click the button below to create a support ticket.\n\n" +
+            "A staff member will assist you as soon as possible."
+          );
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
@@ -627,16 +646,16 @@ async function postTicketPanelsForGuild(guild) {
         await channel.send({ embeds: [embed], components: [row] });
       }
 
-      // MULTI PANEL
+      // MULTI PANEL (SUPPORT + PARTNERSHIP + STAFF)
       if (cfg.type === "multi") {
         const embed = new EmbedBuilder()
           .setTitle("🎟 Tickets & Applications")
           .setColor(0x9b59b6)
           .setDescription(
-            "Choose an option:\n\n" +
-            "💬 Support Ticket\n" +
-            "🤝 Partnership\n" +
-            "🛡 Staff Application"
+            "Choose what you need:\n\n" +
+            "💬 **Support Ticket** – General help & issues\n" +
+            "🤝 **Partnership Ticket** – Server / org partnerships\n" +
+            "🛡 **Staff Application** – Apply to become staff"
           );
 
         const row = new ActionRowBuilder().addComponents(
@@ -650,23 +669,435 @@ async function postTicketPanelsForGuild(guild) {
             .setStyle(ButtonStyle.Secondary),
           new ButtonBuilder()
             .setCustomId("ticket_staff_apply")
-            .setLabel("🛡 Staff Application")
+            .setLabel("🛡 Apply for Staff")
             .setStyle(ButtonStyle.Success)
         );
 
         await channel.send({ embeds: [embed], components: [row] });
       }
-    } catch {}
+    } catch (e) {
+      console.log("Panel post error:", e.message);
+    }
   }
 }
 
 // ================================================================
-// STAFF APPLICATION — FIXED 3-PAGE SYSTEM
+// TICKET MODALS (SUPPORT + PARTNERSHIP + CLOSE)
 // ================================================================
-function clean(s) {
-  return (s || "").trim().replace(/\n/g, " ").replace(/\s+/g, " ");
+function buildSupportTicketModal() {
+  const m = new ModalBuilder()
+    .setCustomId("support_ticket_modal")
+    .setTitle("Support Ticket");
+
+  m.addComponents(
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("support_name")
+        .setLabel("Your IGN / Name")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("support_issue")
+        .setLabel("What do you need help with?")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    )
+  );
+
+  return m;
 }
 
+function buildPartnerTicketModal() {
+  const m = new ModalBuilder()
+    .setCustomId("partner_ticket_modal")
+    .setTitle("Partnership Ticket");
+
+  m.addComponents(
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("partner_name")
+        .setLabel("Your Name / Server Name")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("partner_discord")
+        .setLabel("Your Discord Tag / ID")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("partner_link")
+        .setLabel("Server / Project Link")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("partner_details")
+        .setLabel("Partnership Details")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    )
+  );
+
+  return m;
+}
+
+function buildCloseTicketModal() {
+  const m = new ModalBuilder()
+    .setCustomId("ticket_close_modal")
+    .setTitle("Close Ticket");
+
+  m.addComponents(
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("ticket_close_reason")
+        .setLabel("Reason for closing")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+    )
+  );
+
+  return m;
+}
+
+// ================================================================
+// CREATE TICKET CHANNEL
+// ================================================================
+async function createTicketChannel(interaction, type, formData) {
+  const guild = interaction.guild;
+  if (!guild) {
+    return interaction.reply({
+      content: "I couldn't detect the guild.",
+      ephemeral: true
+    });
+  }
+
+  const panelCfg = getPanelConfigFromInteraction(interaction);
+  if (!panelCfg || !panelCfg.transcriptChannelId) {
+    return interaction.reply({
+      content: "Ticket configuration missing for this panel.",
+      ephemeral: true
+    });
+  }
+
+  let categoryName;
+  if (type === "support") categoryName = SUPPORT_CATEGORY_NAME;
+  else if (type === "partner") categoryName = PARTNERSHIP_CATEGORY_NAME;
+  else categoryName = SUPPORT_CATEGORY_NAME;
+
+  const category = await ensureTicketCategory(guild, categoryName);
+  if (!category) {
+    return interaction.reply({
+      content: "Couldn't create/find the ticket category.",
+      ephemeral: true
+    });
+  }
+
+  const baseName =
+    type === "partner"
+      ? `partner-${interaction.user.username}` 
+      : `ticket-${interaction.user.username}`;
+
+  const channelName = baseName.toLowerCase().replace(/[^a-z0-9\-]/g, "").slice(0, 90);
+
+  let ticketChannel;
+  try {
+    ticketChannel = await guild.channels.create({
+      name: channelName || "ticket",
+      type: 0,
+      parent: category.id,
+      permissionOverwrites: [
+        {
+          id: guild.roles.everyone.id,
+          deny: ["ViewChannel"]
+        },
+        {
+          id: interaction.user.id,
+          allow: ["ViewChannel", "SendMessages", "ReadMessageHistory"]
+        }
+      ]
+    });
+  } catch (e) {
+    console.log("Ticket channel create error:", e.message);
+    return interaction.reply({
+      content: "Failed to create ticket channel.",
+      ephemeral: true
+    });
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(type === "partner" ? 0xf1c40f : 0x3498db)
+    .setTitle(
+      type === "partner" ? "🤝 Partnership Ticket" : "🎫 Support Ticket"
+    )
+    .setDescription(
+      type === "partner"
+        ? "Thanks for reaching out for a partnership.\nA staff member will review your request soon."
+        : "Thanks for opening a support ticket.\nA staff member will be with you shortly."
+    )
+    .addFields(
+      { name: "Opened By", value: `${interaction.user}`, inline: true },
+      { name: "User ID", value: interaction.user.id, inline: true }
+    )
+    .setTimestamp();
+
+  // Add form data fields
+  if (type === "support") {
+    embed.addFields(
+      { name: "IGN / Name", value: formData.name || "N/A" },
+      { name: "Issue", value: formData.issue || "N/A" }
+    );
+  } else if (type === "partner") {
+    embed.addFields(
+      { name: "Name / Server", value: formData.name || "N/A" },
+      { name: "Discord", value: formData.discord || "N/A" },
+      { name: "Link", value: formData.link || "N/A" },
+      { name: "Details", value: formData.details || "N/A" }
+    );
+  }
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("ticket_close")
+      .setLabel("🔒 Close Ticket")
+      .setStyle(ButtonStyle.Danger)
+  );
+
+  const components = [row];
+
+  let content = "";
+  if (STAFF_PING_ROLE_ID) {
+    content = `<@&${STAFF_PING_ROLE_ID}> New ${type === "partner" ? "partnership" : "support"} ticket.`;
+  }
+
+  await ticketChannel.send({
+    content,
+    embeds: [embed],
+    components
+  });
+
+  // Save ticket info
+  DATA.tickets[ticketChannel.id] = {
+    type,
+    userId: interaction.user.id,
+    guildId: guild.id,
+    panelChannelId: interaction.channelId,
+    transcriptChannelId: panelCfg.transcriptChannelId,
+    createdAt: Date.now(),
+    lastActivity: Date.now(),
+    archived: false
+  };
+  saveData();
+
+  return interaction.reply({
+    content: `Your ${type === "partner" ? "partnership" : "support"} ticket has been created: ${ticketChannel}.`,
+    ephemeral: true
+  });
+}
+
+// ================================================================
+// TRANSCRIPT + ARCHIVE / DELETE HELPERS
+// ================================================================
+async function sendTranscriptEmbed(ticketChannel, ticketInfo, options = {}) {
+  const guild = ticketChannel.guild;
+  if (!guild) return;
+
+  const transcriptChannelId = ticketInfo.transcriptChannelId;
+  if (!transcriptChannelId) return;
+
+  const transcriptChannel = guild.channels.cache.get(transcriptChannelId);
+  if (!transcriptChannel || transcriptChannel.type !== 0) return;
+
+  let messages;
+  try {
+    messages = await ticketChannel.messages.fetch({ limit: 100 });
+  } catch (e) {
+    console.log("Transcript fetch error:", e.message);
+    return;
+  }
+
+  const ordered = messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+  const lines = [];
+  for (const msg of ordered.values()) {
+    const time = new Date(msg.createdTimestamp).toISOString().replace("T", " ").split(".")[0];
+    const content = msg.content || "";
+    if (!content) continue;
+    lines.push(`[${time}] ${msg.author.tag}: ${content}`);
+  }
+
+  let transcriptText = lines.join("\n");
+  if (transcriptText.length > 3800) {
+    transcriptText = transcriptText.slice(0, 3800) + "\n... (truncated)";
+  }
+
+  let closedFieldValue;
+  if (options.auto) {
+    closedFieldValue = "Auto-archived after 3 days of inactivity.";
+  } else if (options.closedBy) {
+    closedFieldValue =
+      `Closed & deleted by ${options.closedBy}` +
+      (options.reason ? `\nReason: ${options.reason}` : "");
+  } else {
+    closedFieldValue = "Closed.";
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("📑 Ticket Transcript")
+    .setColor(0x95a5a6)
+    .addFields(
+      { name: "Channel", value: `${ticketChannel} (${ticketChannel.id})` },
+      { name: "Type", value: ticketInfo.type || "Unknown", inline: true },
+      { name: "Opened By", value: `<@${ticketInfo.userId}>`, inline: true },
+      {
+        name: "Closed",
+        value: closedFieldValue
+      }
+    )
+    .setTimestamp();
+
+  if (transcriptText.length > 0) {
+    embed.addFields({
+      name: "Recent Messages",
+      value: "```txt\n" + transcriptText + "\n```"
+    });
+  }
+
+  await transcriptChannel.send({ embeds: [embed] });
+}
+
+async function archiveTicket(ticketChannel, ticketInfo, options = {}) {
+  if (!ticketChannel || !ticketChannel.guild) return;
+
+  if (ticketInfo.archived) return;
+  ticketInfo.archived = true;
+  saveData();
+
+  await sendTranscriptEmbed(ticketChannel, ticketInfo, { auto: true }).catch(() => {});
+
+  const archiveCategory = await ensureArchiveCategory(ticketChannel.guild);
+  if (archiveCategory) {
+    try {
+      await ticketChannel.setParent(archiveCategory.id, { lockPermissions: false });
+      await ticketChannel.setName(`archived-${ticketChannel.name}`.slice(0, 90));
+    } catch (e) {
+      console.log("Archive move error:", e.message);
+    }
+  }
+
+  // Lock user out of channel
+  try {
+    if (ticketInfo.userId) {
+      await ticketChannel.permissionOverwrites.edit(ticketInfo.userId, {
+        ViewChannel: false,
+        SendMessages: false
+      });
+    }
+  } catch (e) {
+    console.log("Archive perms error:", e.message);
+  }
+
+  try {
+    await ticketChannel.send({
+      content: "This ticket has been **auto-archived** after 3 days of inactivity."
+    });
+  } catch {}
+}
+
+async function deleteTicket(ticketChannel, ticketInfo, options = {}) {
+  if (!ticketChannel || !ticketChannel.guild) return;
+
+  await sendTranscriptEmbed(ticketChannel, ticketInfo, {
+    closedBy: options.closedBy,
+    reason: options.reason,
+    auto: false
+  }).catch(() => {});
+
+  try {
+    await ticketChannel.delete(`Ticket closed (manual)`);
+  } catch (e) {
+    console.log("Ticket delete error:", e.message);
+  }
+
+  delete DATA.tickets[ticketChannel.id];
+  saveData();
+}
+
+// CLOSE VIA MODAL (DELETE)
+async function handleTicketCloseModal(interaction) {
+  const info = DATA.tickets[interaction.channel.id];
+  if (!info) {
+    return interaction.reply({
+      content: "This channel is not registered as a ticket.",
+      ephemeral: true
+    });
+  }
+
+  const raw = interaction.fields.getTextInputValue("ticket_close_reason") || "";
+  const reason = clean(raw) || "Resolved";
+
+  // DM user simple
+  try {
+    const user = await client.users.fetch(info.userId);
+    const dateStr = new Date().toLocaleString();
+    await user.send(
+      `Your ticket has been closed by ${interaction.user}.\n` +
+      `Date: ${dateStr}\n` +
+      `Reason: ${reason}`
+    );
+  } catch (e) {
+    console.log("Ticket close DM error:", e.message);
+  }
+
+  // Acknowledge to staff
+  await interaction.reply({
+    content: "Ticket is being closed & deleted.",
+    ephemeral: true
+  });
+
+  // Delete ticket with transcript
+  await deleteTicket(interaction.channel, info, {
+    closedBy: interaction.user,
+    reason
+  });
+}
+
+// AUTO SWEEPER (ARCHIVE AFTER 3 DAYS)
+function startTicketSweeper() {
+  setInterval(async () => {
+    try {
+      if (!DATA.tickets) return;
+      const now = Date.now();
+
+      for (const [channelId, info] of Object.entries(DATA.tickets)) {
+        if (!info || info.archived) continue;
+
+        const guild = client.guilds.cache.get(info.guildId);
+        if (!guild) continue;
+
+        const channel = guild.channels.cache.get(channelId);
+        if (!channel) continue;
+
+        const last = info.lastActivity || info.createdAt || now;
+        if (now - last >= TICKET_INACTIVITY_MS) {
+          console.log("Auto-archiving inactive ticket:", channelId);
+          await archiveTicket(channel, info, { auto: true });
+        }
+      }
+    } catch (e) {
+      console.log("Ticket sweeper error:", e.message);
+    }
+  }, 60 * 60 * 1000); // every 1 hour
+}
+
+// ================================================================
+// STAFF APPLICATION — 2-PAGE SYSTEM (MAX 5 FIELDS PER MODAL)
+// ================================================================
 function buildStaffAppPage1() {
   const m = new ModalBuilder()
     .setCustomId("staff_app_page1")
@@ -678,14 +1109,38 @@ function buildStaffAppPage1() {
         .setCustomId("region_age")
         .setLabel("Region, IGN, Age, Timezone")
         .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("discover_like")
         .setLabel("When did you discover the server & what do you like?")
         .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("experience")
+        .setLabel("Previous staff experience?")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("strengths_weaknesses")
+        .setLabel("Your strengths & weaknesses")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("activity")
+        .setLabel("How active can you be per day?")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
     )
   );
+
   return m;
 }
 
@@ -697,91 +1152,114 @@ function buildStaffAppPage2() {
   m.addComponents(
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
-        .setCustomId("experience")
-        .setLabel("Previous staff experience?")
+        .setCustomId("moderation_capable")
+        .setLabel("Can you moderate maturely? How?")
         .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
-        .setCustomId("strengths")
-        .setLabel("Strengths, weaknesses & activity")
+        .setCustomId("skills")
+        .setLabel("What skills can you bring?")
         .setStyle(TextInputStyle.Paragraph)
-    )
-  );
-  return m;
-}
-
-function buildStaffAppPage3() {
-  const m = new ModalBuilder()
-    .setCustomId("staff_app_page3")
-    .setTitle("Staff Application — Page 3");
-
-  m.addComponents(
+        .setRequired(true)
+    ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
-        .setCustomId("moderation_skills")
-        .setLabel("Moderation skill + why apply")
+        .setCustomId("why_apply")
+        .setLabel("What made you apply for staff?")
         .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("extra")
+        .setLabel("Anything else we should know? (N/A if none)")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
     )
   );
+
   return m;
 }
 
-// START
+// START STAFF APPLICATION
 async function startStaffApplication(interaction) {
-  DATA.staffPanels[interaction.user.id] = interaction.channelId; // save the panel source
+  DATA.staffPanels[interaction.user.id] = interaction.channelId; // save panel source
   saveData();
   return interaction.showModal(buildStaffAppPage1());
 }
 
-// HANDLER
+// HANDLE STAFF APP PAGES
 async function handleStaffAppPages(interaction) {
   const uid = interaction.user.id;
   const panelChannelId = DATA.staffPanels[uid];
 
-  // ❗ FIXED: use saved panel ID, NOT interaction.channelId
   const cfg = TICKET_PANEL_CONFIG[String(panelChannelId)];
-
-  if (!cfg || !cfg.applicationChannelId)
-    return interaction.reply({ content: "Application channel missing.", ephemeral: true });
+  if (!cfg || !cfg.applicationChannelId) {
+    return interaction.reply({
+      content: "Application channel is not configured.",
+      ephemeral: true
+    });
+  }
 
   const appChannel = interaction.guild.channels.cache.get(cfg.applicationChannelId);
+  if (!appChannel || appChannel.type !== 0) {
+    return interaction.reply({
+      content: "Application channel missing or invalid.",
+      ephemeral: true
+    });
+  }
 
-  // PAGE 1
+  // PAGE 1 -> store partial & go to page 2
   if (interaction.customId === "staff_app_page1") {
     DATA.partialStaffApps[uid] = {
       region_age: clean(interaction.fields.getTextInputValue("region_age")),
-      discover_like: clean(interaction.fields.getTextInputValue("discover_like"))
+      discover_like: clean(interaction.fields.getTextInputValue("discover_like")),
+      experience: clean(interaction.fields.getTextInputValue("experience")),
+      strengths_weaknesses: clean(
+        interaction.fields.getTextInputValue("strengths_weaknesses")
+      ),
+      activity: clean(interaction.fields.getTextInputValue("activity"))
     };
     saveData();
     return interaction.showModal(buildStaffAppPage2());
   }
 
-  // PAGE 2
+  // PAGE 2 -> final submit
   if (interaction.customId === "staff_app_page2") {
-    const d = DATA.partialStaffApps[uid];
-    d.experience = clean(interaction.fields.getTextInputValue("experience"));
-    d.strengths = clean(interaction.fields.getTextInputValue("strengths"));
-    saveData();
-    return interaction.showModal(buildStaffAppPage3());
-  }
+    const d = DATA.partialStaffApps[uid] || {};
+    d.moderation_capable = clean(
+      interaction.fields.getTextInputValue("moderation_capable")
+    );
+    d.skills = clean(interaction.fields.getTextInputValue("skills"));
+    d.why_apply = clean(interaction.fields.getTextInputValue("why_apply"));
+    d.extra = clean(interaction.fields.getTextInputValue("extra"));
 
-  // PAGE 3 — FINAL SUBMIT
-  if (interaction.customId === "staff_app_page3") {
-    const d = DATA.partialStaffApps[uid];
-    d.moderation = clean(interaction.fields.getTextInputValue("moderation_skills"));
+    const member = interaction.guild.members.cache.get(uid);
+    const joinedDays =
+      member && member.joinedTimestamp
+        ? Math.floor((Date.now() - member.joinedTimestamp) / (1000 * 60 * 60 * 24))
+        : "Unknown";
 
     const embed = new EmbedBuilder()
       .setTitle(`🛡 Staff Application — ${interaction.user.tag}`)
       .setColor(0x00b894)
       .addFields(
-        { name: "Region / IGN / Age / Timezone", value: d.region_age },
-        { name: "Discovery & Likes", value: d.discover_like },
-        { name: "Experience", value: d.experience },
-        { name: "Strengths & Weaknesses", value: d.strengths },
-        { name: "Moderation & Reason", value: d.moderation },
-        { name: "Applicant", value: `${interaction.user}` }
-      );
+        { name: "Region / IGN / Age / Timezone", value: d.region_age || "N/A" },
+        { name: "Discovery & Likes", value: d.discover_like || "N/A" },
+        { name: "Previous Staff Experience", value: d.experience || "N/A" },
+        { name: "Strengths & Weaknesses", value: d.strengths_weaknesses || "N/A" },
+        { name: "Activity per Day", value: d.activity || "N/A" },
+        { name: "Moderation Capability", value: d.moderation_capable || "N/A" },
+        { name: "Skills Brought to Team", value: d.skills || "N/A" },
+        { name: "Why Apply for Staff?", value: d.why_apply || "N/A" },
+        { name: "Anything Else", value: d.extra || "N/A" },
+        { name: "Applicant", value: `${interaction.user}`, inline: true },
+        { name: "User ID", value: interaction.user.id, inline: true },
+        { name: "Joined Guild", value: `${joinedDays} days ago` }
+      )
+      .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -800,17 +1278,19 @@ async function handleStaffAppPages(interaction) {
     delete DATA.staffPanels[uid];
     saveData();
 
-    return interaction.reply({ content: "Application submitted!", ephemeral: true });
+    return interaction.reply({
+      content: "Your staff application has been submitted!",
+      ephemeral: true
+    });
   }
 }
 
-
 // ================================================================
-// DECISION FLOW
+// STAFF APPLICATION — DECISION FLOW
 // ================================================================
 async function handleStaffAppDecisionButton(interaction) {
   if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild))
-    return interaction.reply({ content: "No perms.", ephemeral: true });
+    return interaction.reply({ content: "You don't have permission.", ephemeral: true });
 
   const [_, raw] = interaction.customId.split("staff_app_decide_");
   const [action, targetId] = raw.split(":");
@@ -823,7 +1303,7 @@ async function handleStaffAppDecisionButton(interaction) {
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("staff_app_decide_reason")
-        .setLabel("Reason (DM to applicant)")
+        .setLabel("Reason (sent to applicant via DM)")
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(false)
     )
@@ -843,10 +1323,12 @@ async function handleStaffAppDecisionModal(interaction) {
     const user = await client.users.fetch(targetId);
     await user.send(
       action === "accept"
-        ? `🎉 You were **ACCEPTED**!\nReason: ${reason}`
-        : `❌ You were **DENIED**.\nReason: ${reason}`
+        ? `🎉 You have been **ACCEPTED** as staff!\nReason: ${reason}`
+        : `❌ Your staff application was **DENIED**.\nReason: ${reason}`
     );
-  } catch {}
+  } catch (e) {
+    console.log("DM error:", e.message);
+  }
 
   try {
     const msg = await interaction.channel.messages.fetch(messageId);
@@ -865,15 +1347,23 @@ async function handleStaffAppDecisionModal(interaction) {
       embeds: [e],
       components: [
         new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setLabel("Accepted").setStyle(ButtonStyle.Success).setDisabled(true),
-          new ButtonBuilder().setLabel("Denied").setStyle(ButtonStyle.Danger).setDisabled(true)
+          new ButtonBuilder()
+            .setLabel("Accepted")
+            .setStyle(ButtonStyle.Success)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setLabel("Denied")
+            .setStyle(ButtonStyle.Danger)
+            .setDisabled(true)
         )
       ]
     });
-  } catch {}
+  } catch (e) {
+    console.log("Staff decision edit error:", e.message);
+  }
 
   return interaction.reply({
-    content: action === "accept" ? "Marked accepted!" : "Marked denied!",
+    content: action === "accept" ? "Marked as accepted!" : "Marked as denied!",
     ephemeral: true
   });
 }
@@ -894,7 +1384,7 @@ client.on("ready", async () => {
 });
 
 // ================================================================
-// INTERACTION HANDLER — BUTTONS + MODALS
+// INTERACTION HANDLER — BUTTONS + MODALS (TICKETS + STAFF APPS)
 // ================================================================
 client.on("interactionCreate", async (interaction) => {
   try {
@@ -902,54 +1392,81 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.isButton()) {
       const id = interaction.customId;
 
-      // SUPPORT TICKET
+      // SUPPORT TICKET BUTTON
       if (id === "ticket_support_open") {
-        return createTicketChannel(interaction, "support");
+        return interaction.showModal(buildSupportTicketModal());
       }
 
-      // PARTNERSHIP TICKET
+      // PARTNERSHIP TICKET BUTTON
       if (id === "ticket_partner_open") {
-        return createTicketChannel(interaction, "partner");
+        return interaction.showModal(buildPartnerTicketModal());
       }
 
-if (id === "ticket_staff_apply") {
-  const cfg = TICKET_PANEL_CONFIG[String(interaction.channelId)]; // ✅ FIXED
-  console.log("STAFF APPLY → PANEL:", interaction.channelId, "CFG:", cfg);
+      // STAFF APPLICATION BUTTON
+      if (id === "ticket_staff_apply") {
+        const cfg = TICKET_PANEL_CONFIG[String(interaction.channelId)];
+        console.log("STAFF APPLY → PANEL:", interaction.channelId, "CFG:", cfg);
 
-  if (!cfg || cfg.type !== "multi") {
-    return interaction.reply({
-      content: "Staff applications not available here.",
-      ephemeral: true
-    });
-  }
+        if (!cfg || cfg.type !== "multi") {
+          return interaction.reply({
+            content: "Staff applications are not available here.",
+            ephemeral: true
+          });
+        }
 
-  return startStaffApplication(interaction);
-}
+        return startStaffApplication(interaction);
+      }
 
-
-      // DECISION BUTTONS
+      // STAFF APPLICATION DECISION BUTTONS
       if (id.startsWith("staff_app_decide_")) {
         return handleStaffAppDecisionButton(interaction);
       }
 
-      // CLOSE TICKET
+      // CLOSE TICKET BUTTON → OPEN CLOSE MODAL
       if (id === "ticket_close") {
-        return handleTicketClose(interaction);
+        return interaction.showModal(buildCloseTicketModal());
       }
     }
 
     // ===================== MODALS =====================
     if (interaction.isModalSubmit()) {
-      if (
-        interaction.customId === "staff_app_page1" ||
-        interaction.customId === "staff_app_page2" ||
-        interaction.customId === "staff_app_page3"
-      ) {
+      const id = interaction.customId;
+
+      // SUPPORT TICKET MODAL SUBMIT
+      if (id === "support_ticket_modal") {
+        const name = clean(interaction.fields.getTextInputValue("support_name"));
+        const issue = clean(interaction.fields.getTextInputValue("support_issue"));
+        return createTicketChannel(interaction, "support", { name, issue });
+      }
+
+      // PARTNERSHIP TICKET MODAL SUBMIT
+      if (id === "partner_ticket_modal") {
+        const name = clean(interaction.fields.getTextInputValue("partner_name"));
+        const discord = clean(interaction.fields.getTextInputValue("partner_discord"));
+        const link = clean(interaction.fields.getTextInputValue("partner_link"));
+        const details = clean(interaction.fields.getTextInputValue("partner_details"));
+
+        return createTicketChannel(interaction, "partner", {
+          name,
+          discord,
+          link,
+          details
+        });
+      }
+
+      // STAFF APPLICATION PAGES
+      if (id === "staff_app_page1" || id === "staff_app_page2") {
         return handleStaffAppPages(interaction);
       }
 
-      if (interaction.customId.startsWith("staff_app_modal_decide:")) {
+      // STAFF APPLICATION DECISION MODAL
+      if (id.startsWith("staff_app_modal_decide:")) {
         return handleStaffAppDecisionModal(interaction);
+      }
+
+      // TICKET CLOSE MODAL
+      if (id === "ticket_close_modal") {
+        return handleTicketCloseModal(interaction);
       }
     }
   } catch (e) {
@@ -974,89 +1491,7 @@ client.on("messageCreate", (msg) => {
   }
 });
 
-// ----------------- TEAM BUTTON LOGIC -----------------
-client.on("interactionCreate", async interaction => {
-  try {
-    if (interaction.isButton()) {
-      if (interaction.customId === "register_team") {
-        const modal = new ModalBuilder()
-          .setCustomId("team_modal")
-          .setTitle("Register Your Team");
 
-        modal.addComponents(
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId("team_name")
-              .setLabel("Team Name")
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId("m1")
-              .setLabel("Member 1")
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId("m2")
-              .setLabel("Member 2 (optional)")
-              .setStyle(TextInputStyle.Short)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId("m3")
-              .setLabel("Member 3 (optional)")
-              .setStyle(TextInputStyle.Short)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId("m45")
-              .setLabel("Members 4 & 5 (comma separated)")
-              .setStyle(TextInputStyle.Short)
-          )
-        );
-
-        return interaction.showModal(modal);
-      }
-
-      if (interaction.customId === "need_team") {
-        const modal = new ModalBuilder()
-          .setCustomId("lf_modal")
-          .setTitle("Looking For a Team");
-
-        modal.addComponents(
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId("about")
-              .setLabel("Tell about yourself")
-              .setStyle(TextInputStyle.Paragraph)
-              .setRequired(true)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId("hours")
-              .setLabel("Online Time")
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-          ),
-          new ActionRowBuilder().addComponents(
-            new TextInputBuilder()
-              .setCustomId("timezone")
-              .setLabel("Timezone (IST etc.)")
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-          )
-        );
-
-        return interaction.showModal(modal);
-      }
-    }
-  } catch (e) {
-    console.log("Button error:", e.message);
-  }
-});
 // ----------------- TEAM MODAL HANDLING -----------------
 client.on("interactionCreate", async (interaction) => {
   try {
@@ -2222,6 +2657,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
