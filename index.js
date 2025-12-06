@@ -1095,211 +1095,23 @@ function startTicketSweeper() {
   }, 60 * 60 * 1000); // every 1 hour
 }
 
-// ================================================================
-// STAFF APPLICATION — 2-PAGE SYSTEM (MAX 5 FIELDS PER MODAL)
-// ================================================================
-function buildStaffAppPage1() {
-  const m = new ModalBuilder()
-    .setCustomId("staff_app_page1")
-    .setTitle("Staff Application — Page 1");
+//================================================================
+//STAFF APPS
+//===============================================================
+if (id === "ticket_staff_apply") {
+  const panelId = String(interaction.message?.channelId || interaction.channelId);
+  const cfg = TICKET_PANEL_CONFIG[panelId];
 
-  m.addComponents(
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("region_age")
-        .setLabel("Region, IGN, Age, Timezone") // OK
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("discover_like")
-        .setLabel("When did you find us? ") // FIXED <45
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("experience")
-        .setLabel("Previous staff experience?") // OK
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("strengths_weaknesses")
-        .setLabel("Strengths & weaknesses") // FIXED <45
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("activity")
-        .setLabel("Daily activity (hours)?") // OK
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-    )
-  );
+  console.log("STAFF APPLY → PANEL:", panelId, "CFG:", cfg);
 
-  return m;
-}
-
-function buildStaffAppPage2() {
-  const m = new ModalBuilder()
-    .setCustomId("staff_app_page2")
-    .setTitle("Staff Application — Page 2");
-
-  m.addComponents(
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("moderation_capable")
-        .setLabel("Can you moderate maturely? How?") // FIXED
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("skills")
-        .setLabel("Skills you bring to staff") // FIXED
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("why_apply")
-        .setLabel("Why apply for staff?") // FIXED
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId("extra")
-        .setLabel("Anything else? (N/A if none)") // FIXED
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-    )
-  );
-
-  return m;
-}
-
-
-// START STAFF APPLICATION
-async function startStaffApplication(interaction) {
-  DATA.staffPanels[interaction.user.id] = interaction.channelId; // save panel source
-  saveData();
-  return interaction.showModal(buildStaffAppPage1());
-}
-
-// HANDLE STAFF APP PAGES
-async function handleStaffAppPages(interaction) {
-  const uid = interaction.user.id;
-  const panelChannelId = DATA.staffPanels[uid];
-
-  const cfg = TICKET_PANEL_CONFIG[String(panelChannelId)];
-  if (!cfg || !cfg.applicationChannelId) {
+  if (!cfg || cfg.type !== "multi") {
     return interaction.reply({
-      content: "Application channel is not configured.",
+      content: "Staff applications are not available here.",
       ephemeral: true
     });
   }
 
-  const appChannel = interaction.guild.channels.cache.get(cfg.applicationChannelId);
-  if (!appChannel || appChannel.type !== 0) {
-    return interaction.reply({
-      content: "Application channel missing or invalid.",
-      ephemeral: true
-    });
-  }
-
-  // PAGE 1 SUBMIT → SAVE + SHOW BUTTON TO CONTINUE
-  if (interaction.customId === "staff_app_page1") {
-    DATA.partialStaffApps[uid] = {
-      region_age: clean(interaction.fields.getTextInputValue("region_age")),
-      discover_like: clean(interaction.fields.getTextInputValue("discover_like")),
-      experience: clean(interaction.fields.getTextInputValue("experience")),
-      strengths_weaknesses: clean(interaction.fields.getTextInputValue("strengths_weaknesses")),
-      activity: clean(interaction.fields.getTextInputValue("activity"))
-    };
-    saveData();
-
-    return interaction.reply({
-      content: "Page 1 submitted. Click below to continue to Page 2.",
-      ephemeral: true,
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId("staff_app_continue_p2")
-            .setLabel("➡️ Continue to Page 2")
-            .setStyle(ButtonStyle.Primary)
-        )
-      ]
-    });
-  }
-
-// PAGE 2 BUTTON (continue)
-if (interaction.customId === "staff_app_continue_p2") {
-  await interaction.showModal(buildStaffAppPage2());
-  return; // IMPORTANT FIX - stops other handlers from firing
-}
-
-
-  // PAGE 2 SUBMIT → FINAL APPLICATION
-  if (interaction.customId === "staff_app_page2") {
-    const d = DATA.partialStaffApps[uid] || {};
-
-    d.moderation_capable = clean(interaction.fields.getTextInputValue("moderation_capable"));
-    d.skills = clean(interaction.fields.getTextInputValue("skills"));
-    d.why_apply = clean(interaction.fields.getTextInputValue("why_apply"));
-    d.extra = clean(interaction.fields.getTextInputValue("extra"));
-
-    const member = interaction.guild.members.cache.get(uid);
-    const joinedDays =
-      member && member.joinedTimestamp
-        ? Math.floor((Date.now() - member.joinedTimestamp) / (1000 * 60 * 60 * 24))
-        : "Unknown";
-
-    const embed = new EmbedBuilder()
-      .setTitle(`🛡 Staff Application — ${interaction.user.tag}`)
-      .setColor(0x00b894)
-      .addFields(
-        { name: "Region / IGN / Age / Timezone", value: d.region_age || "N/A" },
-        { name: "Discovery & Likes", value: d.discover_like || "N/A" },
-        { name: "Previous Staff Experience", value: d.experience || "N/A" },
-        { name: "Strengths & Weaknesses", value: d.strengths_weaknesses || "N/A" },
-        { name: "Activity per Day", value: d.activity || "N/A" },
-        { name: "Moderation Capability", value: d.moderation_capable || "N/A" },
-        { name: "Skills Brought to Team", value: d.skills || "N/A" },
-        { name: "Why Apply for Staff?", value: d.why_apply || "N/A" },
-        { name: "Anything Else", value: d.extra || "N/A" },
-        { name: "Applicant", value: `${interaction.user}`, inline: true },
-        { name: "User ID", value: interaction.user.id, inline: true },
-        { name: "Joined Guild", value: `${joinedDays} days ago` }
-      )
-      .setTimestamp();
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`staff_app_decide_accept:${uid}`)
-        .setLabel("✅ Accept")
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(`staff_app_decide_deny:${uid}`)
-        .setLabel("❌ Deny")
-        .setStyle(ButtonStyle.Danger)
-    );
-
-    await appChannel.send({ embeds: [embed], components: [row] });
-
-    delete DATA.partialStaffApps[uid];
-    delete DATA.staffPanels[uid];
-    saveData();
-
-    return interaction.reply({
-      content: "Your staff application has been submitted!",
-      ephemeral: true
-    });
-  }
+  return startStaffApplication(interaction);
 }
 
 
@@ -2687,6 +2499,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
