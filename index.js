@@ -1329,7 +1329,7 @@ return interaction.reply({
   content: action === "accept" ? "Marked as accepted!" : "Marked as denied!",
   ephemeral: true
 });
-
+} 
 
 // ================================================================
 // READY EVENT FOR TICKET SYSTEM
@@ -2633,6 +2633,3 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
-
-});
-
