@@ -1107,35 +1107,35 @@ function buildStaffAppPage1() {
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("region_age")
-        .setLabel("Region, IGN, Age, Timezone")
+        .setLabel("Region, IGN, Age, Timezone") // OK
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("discover_like")
-        .setLabel("When did you discover the server & what do you like?")
+        .setLabel("When did you find us? ") // FIXED <45
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("experience")
-        .setLabel("Previous staff experience?")
+        .setLabel("Previous staff experience?") // OK
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("strengths_weaknesses")
-        .setLabel("Your strengths & weaknesses")
+        .setLabel("Strengths & weaknesses") // FIXED <45
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("activity")
-        .setLabel("How active can you be per day?")
+        .setLabel("Daily activity (hours)?") // OK
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
     )
@@ -1153,28 +1153,28 @@ function buildStaffAppPage2() {
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("moderation_capable")
-        .setLabel("Can you moderate maturely? How?")
+        .setLabel("Can you moderate maturely? How?") // FIXED
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("skills")
-        .setLabel("What skills can you bring?")
+        .setLabel("Skills you bring to staff") // FIXED
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("why_apply")
-        .setLabel("What made you apply for staff?")
+        .setLabel("Why apply for staff?") // FIXED
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId("extra")
-        .setLabel("Anything else we should know? (N/A if none)")
+        .setLabel("Anything else? (N/A if none)") // FIXED
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
     )
@@ -1182,6 +1182,7 @@ function buildStaffAppPage2() {
 
   return m;
 }
+
 
 // START STAFF APPLICATION
 async function startStaffApplication(interaction) {
@@ -2661,6 +2662,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
