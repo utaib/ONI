@@ -1093,27 +1093,143 @@ function startTicketSweeper() {
       console.log("Ticket sweeper error:", e.message);
     }
   }, 60 * 60 * 1000); // every 1 hour
+// ================================================================
+// STAFF APPLICATION — SINGLE PAGE (5 FIELDS) — FINAL VERSION
+// ================================================================
+
+// BUILD FULL APPLICATION MODAL (5 fields MAX)
+function buildStaffAppModal() {
+  const m = new ModalBuilder()
+    .setCustomId("staff_app_full")
+    .setTitle("🛡 Staff Application");
+
+  m.addComponents(
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("basic_info")
+        .setLabel("Region / IGN / Age / Timezone")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    ),
+
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("experience")
+        .setLabel("Previous staff experience?")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    ),
+
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("why_apply")
+        .setLabel("Why do you want to join staff?")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    ),
+
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("strengths")
+        .setLabel("Strengths & weaknesses")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+    ),
+
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("extra")
+        .setLabel("Anything else? (optional)")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+    )
+  );
+
+  return m;
 }
 
-//================================================================
-//STAFF APPS
-//===============================================================
-if (id === "ticket_staff_apply") {
-  const panelId = String(interaction.message?.channelId || interaction.channelId);
-  const cfg = TICKET_PANEL_CONFIG[panelId];
+// START STAFF APPLICATION
+async function startStaffApplication(interaction) {
+  DATA.staffPanels[interaction.user.id] = interaction.channelId; 
+  saveData();
+  return interaction.showModal(buildStaffAppModal());
+}
 
-  console.log("STAFF APPLY → PANEL:", panelId, "CFG:", cfg);
+// HANDLE FULL STAFF APPLICATION
+async function handleStaffAppPages(interaction) {
+  if (interaction.customId !== "staff_app_full") return;
 
-  if (!cfg || cfg.type !== "multi") {
+  const uid = interaction.user.id;
+  const panelChannelId = DATA.staffPanels[uid];
+  const cfg = TICKET_PANEL_CONFIG[String(panelChannelId)];
+
+  if (!cfg || !cfg.applicationChannelId) {
     return interaction.reply({
-      content: "Staff applications are not available here.",
+      content: "Application channel is not configured.",
       ephemeral: true
     });
   }
 
-  return startStaffApplication(interaction);
-}
+  const appChannel = interaction.guild.channels.cache.get(cfg.applicationChannelId);
+  if (!appChannel || appChannel.type !== 0) {
+    return interaction.reply({
+      content: "Application channel missing or invalid.",
+      ephemeral: true
+    });
+  }
 
+  // FORM DATA
+  const d = {
+    basic_info: clean(interaction.fields.getTextInputValue("basic_info")),
+    experience: clean(interaction.fields.getTextInputValue("experience")),
+    why_apply: clean(interaction.fields.getTextInputValue("why_apply")),
+    strengths: clean(interaction.fields.getTextInputValue("strengths")),
+    extra: clean(interaction.fields.getTextInputValue("extra"))
+  };
+
+  const member = interaction.guild.members.cache.get(uid);
+  const joinedDays =
+    member && member.joinedTimestamp
+      ? Math.floor((Date.now() - member.joinedTimestamp) / (1000 * 60 * 60 * 24))
+      : "Unknown";
+
+  // FINAL EMBED
+  const embed = new EmbedBuilder()
+    .setTitle(`🛡 Staff Application — ${interaction.user.tag}`)
+    .setColor(0x00b894)
+    .addFields(
+      { name: "Basic Info", value: d.basic_info },
+      { name: "Experience", value: d.experience },
+      { name: "Why Apply", value: d.why_apply },
+      { name: "Strengths & Weaknesses", value: d.strengths },
+      { name: "Extra", value: d.extra || "N/A" },
+      { name: "Applicant", value: `${interaction.user}`, inline: true },
+      { name: "User ID", value: interaction.user.id, inline: true },
+      { name: "Joined Guild", value: `${joinedDays} days ago` }
+    )
+    .setTimestamp();
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`staff_app_decide_accept:${uid}`)
+      .setLabel("✅ Accept")
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`staff_app_decide_deny:${uid}`)
+      .setLabel("❌ Deny")
+      .setStyle(ButtonStyle.Danger)
+  );
+
+  await appChannel.send({ embeds: [embed], components: [row] });
+
+  delete DATA.staffPanels[uid];
+  saveData();
+
+  return interaction.reply({
+    content: "Your staff application has been submitted!",
+    ephemeral: true
+  });
+}
 
 // ================================================================
 // STAFF APPLICATION — DECISION FLOW
@@ -1234,21 +1350,21 @@ client.on("interactionCreate", async (interaction) => {
 
       // STAFF APPLICATION BUTTON
 if (id === "ticket_staff_apply") {
-    // FIXED: Detect panel using message.channelId (the panel’s channel)
-    const panelId = String(interaction.message?.channelId || interaction.channelId);
-    const cfg = TICKET_PANEL_CONFIG[panelId];
+  const panelId = String(interaction.message?.channelId || interaction.channelId);
+  const cfg = TICKET_PANEL_CONFIG[panelId];
 
-    console.log("STAFF APPLY → PANEL:", panelId, "CFG:", cfg);
+  console.log("STAFF APPLY → PANEL:", panelId, "CFG:", cfg);
 
-    if (!cfg || cfg.type !== "multi") {
-      return interaction.reply({
-        content: "Staff applications are not available here.",
-        ephemeral: true
-      });
-    }
+  if (!cfg || cfg.type !== "multi") {
+    return interaction.reply({
+      content: "Staff applications are not available here.",
+      ephemeral: true
+    });
+  }
 
-    return startStaffApplication(interaction);
+  return startStaffApplication(interaction);
 }
+
 
 
       // STAFF APPLICATION DECISION BUTTONS
@@ -2499,6 +2615,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
