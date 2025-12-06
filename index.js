@@ -1406,9 +1406,10 @@ if (id === "ticket_staff_apply") {
       }
 
       // STAFF APPLICATION PAGES
-      if (id === "staff_app_page1" || id === "staff_app_page2") {
-        return handleStaffAppPages(interaction);
-      }
+// STAFF APPLICATION FULL FORM (single modal)
+if (id === "staff_app_full") {
+  return handleStaffAppPages(interaction);
+}
 
       // STAFF APPLICATION DECISION MODAL
       if (id.startsWith("staff_app_modal_decide:")) {
@@ -2616,6 +2617,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
