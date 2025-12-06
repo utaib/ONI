@@ -1288,65 +1288,47 @@ async function handleStaffAppDecisionModal(interaction) {
     console.log("DM error:", e.message);
   }
 
-  // -------------------------------------------------------------
-  // ⭐ UPDATE ORIGINAL APPLICATION MESSAGE
-  // -------------------------------------------------------------
-  try {
-    const msg = await interaction.channel.messages.fetch(messageId);
-    const old = msg.embeds[0];
-    const e = EmbedBuilder.from(old);
+ // -------------------------------------------------------------
+// ⭐ NEW VERSION — DO NOT EDIT ORIGINAL APPLICATION
+//    JUST SEND A NEW EMBED BELOW
+// -------------------------------------------------------------
+try {
+  const notifyEmbed = new EmbedBuilder()
+    .setTitle(action === "accept" ? "🟢 Application Accepted" : "🔴 Application Denied")
+    .setColor(action === "accept" ? 0x2ecc71 : 0xe74c3c)
+    .setDescription(
+      action === "accept"
+        ? `The above application has been **ACCEPTED**.`
+        : `The above application has been **DENIED**.`
+    )
+    .addFields(
+      {
+        name: "Reviewed By",
+        value: `${interaction.user} (${interaction.user.id})`,
+        inline: true
+      },
+      {
+        name: "Applicant",
+        value: `<@${targetId}> (${targetId})`,
+        inline: true
+      },
+      {
+        name: "Reason",
+        value: reason
+      }
+    )
+    .setTimestamp();
 
-    e.addFields({
-      name: "Status",
-      value:
-        action === "accept"
-          ? `✅ Accepted by ${interaction.user}\n**Reason:** ${reason}`
-          : `❌ Denied by ${interaction.user}\n**Reason:** ${reason}`
-    });
+  await interaction.channel.send({ embeds: [notifyEmbed] });
 
-    await msg.edit({
-      embeds: [e],
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setLabel("Accepted")
-            .setStyle(ButtonStyle.Success)
-            .setDisabled(true),
-          new ButtonBuilder()
-            .setLabel("Denied")
-            .setStyle(ButtonStyle.Danger)
-            .setDisabled(true)
-        )
-      ]
-    });
-
-    // -------------------------------------------------------------
-    // ⭐ EXTRA: Add a notification embed below for other staff
-    // -------------------------------------------------------------
-    const notifyEmbed = new EmbedBuilder()
-      .setTitle(action === "accept" ? "🟢 Application Accepted" : "🔴 Application Denied")
-      .setColor(action === "accept" ? 0x2ecc71 : 0xe74c3c)
-      .setDescription(
-        `${interaction.user} has **${action === "accept" ? "ACCEPTED" : "DENIED"}** the application of <@${targetId}>.`
-      )
-      .addFields(
-        { name: "Applicant", value: `<@${targetId}> (${targetId})`, inline: true },
-        { name: "Staff Member", value: `${interaction.user}`, inline: true },
-        { name: "Reason", value: reason }
-      )
-      .setTimestamp();
-
-    await interaction.channel.send({ embeds: [notifyEmbed] });
-
-  } catch (e) {
-    console.log("Staff decision edit error:", e.message);
-  }
-
-  return interaction.reply({
-    content: action === "accept" ? "Marked as accepted!" : "Marked as denied!",
-    ephemeral: true
-  });
+} catch (e) {
+  console.log("Staff decision embed error:", e.message);
 }
+
+return interaction.reply({
+  content: action === "accept" ? "Marked as accepted!" : "Marked as denied!",
+  ephemeral: true
+});
 
 
 // ================================================================
@@ -2651,6 +2633,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
