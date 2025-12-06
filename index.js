@@ -1233,7 +1233,7 @@ async function handleStaffAppPages(interaction) {
 }
 
 // ================================================================
-// STAFF APPLICATION — DECISION FLOW
+// STAFF APPLICATION — DECISION FLOW (FINAL FIXED VERSION)
 // ================================================================
 async function handleStaffAppDecisionButton(interaction) {
   if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild))
@@ -1266,17 +1266,31 @@ async function handleStaffAppDecisionModal(interaction) {
     interaction.fields.getTextInputValue("staff_app_decide_reason") ||
     "No reason provided.";
 
+  // -------------------------------------------------------------
+  // ⭐ SEND DM AS EMBED (ACCEPT / DENY)
+  // -------------------------------------------------------------
   try {
     const user = await client.users.fetch(targetId);
-    await user.send(
-      action === "accept"
-        ? `🎉 You have been **ACCEPTED** as staff!\nReason: ${reason}`
-        : `❌ Your staff application was **DENIED**.\nReason: ${reason}`
-    );
+
+    const dmEmbed = new EmbedBuilder()
+      .setTitle(action === "accept" ? "🎉 Application Accepted!" : "❌ Application Denied")
+      .setColor(action === "accept" ? 0x2ecc71 : 0xe74c3c)
+      .setDescription(
+        action === "accept"
+          ? "Congratulations! You have been **accepted** as staff."
+          : "Your staff application has been **denied**."
+      )
+      .addFields({ name: "Reason", value: reason })
+      .setTimestamp();
+
+    await user.send({ embeds: [dmEmbed] }).catch(() => {});
   } catch (e) {
     console.log("DM error:", e.message);
   }
 
+  // -------------------------------------------------------------
+  // ⭐ UPDATE ORIGINAL APPLICATION MESSAGE
+  // -------------------------------------------------------------
   try {
     const msg = await interaction.channel.messages.fetch(messageId);
     const old = msg.embeds[0];
@@ -1286,8 +1300,8 @@ async function handleStaffAppDecisionModal(interaction) {
       name: "Status",
       value:
         action === "accept"
-          ? `✅ Accepted by ${interaction.user}\nReason: ${reason}`
-          : `❌ Denied by ${interaction.user}\nReason: ${reason}`
+          ? `✅ Accepted by ${interaction.user}\n**Reason:** ${reason}`
+          : `❌ Denied by ${interaction.user}\n**Reason:** ${reason}`
     });
 
     await msg.edit({
@@ -1305,6 +1319,25 @@ async function handleStaffAppDecisionModal(interaction) {
         )
       ]
     });
+
+    // -------------------------------------------------------------
+    // ⭐ EXTRA: Add a notification embed below for other staff
+    // -------------------------------------------------------------
+    const notifyEmbed = new EmbedBuilder()
+      .setTitle(action === "accept" ? "🟢 Application Accepted" : "🔴 Application Denied")
+      .setColor(action === "accept" ? 0x2ecc71 : 0xe74c3c)
+      .setDescription(
+        `${interaction.user} has **${action === "accept" ? "ACCEPTED" : "DENIED"}** the application of <@${targetId}>.`
+      )
+      .addFields(
+        { name: "Applicant", value: `<@${targetId}> (${targetId})`, inline: true },
+        { name: "Staff Member", value: `${interaction.user}`, inline: true },
+        { name: "Reason", value: reason }
+      )
+      .setTimestamp();
+
+    await interaction.channel.send({ embeds: [notifyEmbed] });
+
   } catch (e) {
     console.log("Staff decision edit error:", e.message);
   }
@@ -1314,6 +1347,7 @@ async function handleStaffAppDecisionModal(interaction) {
     ephemeral: true
   });
 }
+
 
 // ================================================================
 // READY EVENT FOR TICKET SYSTEM
@@ -2617,6 +2651,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
