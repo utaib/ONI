@@ -541,7 +541,7 @@ await autoPostRules(client.guilds.cache);
 
 // PANEL + ROUTING CONFIG
 const TICKET_PANEL_CONFIG = {
-  // SUPPORT-ONLY PANELS
+  // SUPPORT PANELS
   "1435290538793238618": {
     type: "support-only",
     transcriptChannelId: "1440923536809136209"
@@ -551,7 +551,7 @@ const TICKET_PANEL_CONFIG = {
     transcriptChannelId: "1440923536838623302"
   },
 
-  // MULTI-PANELS (PARTNERSHIP + STAFF APPLY + GENERAL SUPPORT)
+  // MULTI-PANELS (SUPPORT + PARTNERSHIP + STAFF APPLY)
   "1368336173990154381": {
     type: "multi",
     transcriptChannelId: "1440928986409603213",
@@ -568,30 +568,26 @@ const SUPPORT_CATEGORY_NAME = "Tickets";
 const PARTNERSHIP_CATEGORY_NAME = "Partnerships";
 const ARCHIVE_CATEGORY_NAME = "Archived Tickets";
 
-const TICKET_INACTIVITY_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+const TICKET_INACTIVITY_MS = 3 * 24 * 60 * 60 * 1000;
 
-// make sure DATA.tickets exists
 DATA.tickets = DATA.tickets || {};
 
-// ----------------- CATEGORY HELPERS -----------------
+// ================================================================
+// CATEGORY HELPERS
+// ================================================================
 async function ensureTicketCategory(guild, name) {
   if (!guild) return null;
 
-  let cat = guild.channels.cache.find(
-    c => c.type === 4 && c.name === name
-  );
-
+  let cat = guild.channels.cache.find(c => c.type === 4 && c.name === name);
   if (cat) return cat;
 
   try {
-    cat = await guild.channels.create({
+    return await guild.channels.create({
       name,
-      type: 4, // GuildCategory
-      reason: `Auto-created ticket category: ${name}`
+      type: 4
     });
-    return cat;
   } catch (e) {
-    console.log(`Category create error (${name}, ${guild.id}):`, e.message);
+    console.log("Category error:", e.message);
     return null;
   }
 }
@@ -600,42 +596,38 @@ async function ensureArchiveCategory(guild) {
   return ensureTicketCategory(guild, ARCHIVE_CATEGORY_NAME);
 }
 
-// ----------------- PANEL SENDER -----------------
+// ================================================================
+// POST TICKET PANELS
+// ================================================================
 async function postTicketPanelsForGuild(guild) {
   if (!guild?.available) return;
 
-  for (const [panelChannelId, cfg] of Object.entries(TICKET_PANEL_CONFIG)) {
-    const channel = guild.channels.cache.get(panelChannelId);
+  for (const [channelId, cfg] of Object.entries(TICKET_PANEL_CONFIG)) {
+    const channel = guild.channels.cache.get(channelId);
     if (!channel || channel.type !== 0) continue;
 
     try {
-      // delete old bot panels from this bot in that channel
       const msgs = await channel.messages.fetch({ limit: 50 }).catch(() => null);
       if (msgs) {
-        const botMsgs = msgs.filter(
+        const old = msgs.filter(
           m =>
             m.author.id === client.user.id &&
-            m.embeds?.[0] &&
-            m.embeds[0].title &&
+            m.embeds?.[0]?.title &&
             (
-              m.embeds[0].title.includes("Support Ticket Panel") ||
-              m.embeds[0].title.includes("Tickets Panel") ||
-              m.embeds[0].title.includes("Help & Support")
+              m.embeds[0].title.includes("Help & Support") ||
+              m.embeds[0].title.includes("Tickets & Applications")
             )
         );
-        for (const m of botMsgs.values()) {
-          await m.delete().catch(() => {});
-        }
+
+        for (const m of old.values()) await m.delete().catch(() => {});
       }
 
-      // Build embed + buttons based on type
+      // SUPPORT-ONLY PANEL
       if (cfg.type === "support-only") {
         const embed = new EmbedBuilder()
           .setTitle("🆘 Help & Support")
           .setColor(0x3498db)
-          .setDescription(
-            "Need help?\nClick the button below to open a **support ticket**.\nA staff member will respond as soon as they can."
-          );
+          .setDescription("Click to open a **support ticket**.");
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
@@ -645,197 +637,132 @@ async function postTicketPanelsForGuild(guild) {
         );
 
         await channel.send({ embeds: [embed], components: [row] });
-      } else if (cfg.type === "multi") {
+      }
+
+      // MULTI PANEL
+      if (cfg.type === "multi") {
         const embed = new EmbedBuilder()
           .setTitle("🎟 Tickets & Applications")
           .setColor(0x9b59b6)
           .setDescription(
-            "Choose what you need below:\n\n" +
-            "🟢 **General Support** — Questions, issues, anything you need.\n" +
-            "🟣 **Partnerships** — Server partnership & collabs.\n" +
-            "🛡 **Apply for Staff** — Send a full staff application."
+            "Choose an option:\n\n" +
+            "💬 Support Ticket\n" +
+            "🤝 Partnership\n" +
+            "🛡 Staff Application"
           );
 
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId("ticket_support_open")
-            .setLabel("💬 General Support")
+            .setLabel("💬 Support")
             .setStyle(ButtonStyle.Primary),
-
           new ButtonBuilder()
             .setCustomId("ticket_partner_open")
-            .setLabel("🤝 Partnerships Ticket")
+            .setLabel("🤝 Partnership")
             .setStyle(ButtonStyle.Secondary),
-
           new ButtonBuilder()
             .setCustomId("ticket_staff_apply")
-            .setLabel("🛡 Apply For Staff")
+            .setLabel("🛡 Staff Application")
             .setStyle(ButtonStyle.Success)
         );
 
         await channel.send({ embeds: [embed], components: [row] });
       }
     } catch (e) {
-      console.log(`Ticket panel error in guild ${guild.id}, ch ${panelChannelId}:`, e.message);
+      console.log("Panel posting error:", e.message);
     }
   }
 }
 
+// ================================================================
+// SWEEPER (AUTO ARCHIVE)
+// ================================================================
 function startTicketSweeper() {
-  const INTERVAL = 30 * 60 * 1000; // 30 min
-
   setInterval(async () => {
     try {
-      if (!DATA.tickets) return;
       const now = Date.now();
 
-      for (const [channelId, info] of Object.entries(DATA.tickets)) {
+      for (const [id, info] of Object.entries(DATA.tickets)) {
         if (!info || info.archived) continue;
-        if (!info.guildId) continue;
+        if (now - (info.lastActivity || info.createdAt) < TICKET_INACTIVITY_MS) continue;
 
         const guild = client.guilds.cache.get(info.guildId);
         if (!guild) continue;
 
-        const ch = guild.channels.cache.get(channelId);
+        const ch = guild.channels.cache.get(id);
         if (!ch) continue;
 
-        const last = info.lastActivity || info.createdAt;
-        if (!last) continue;
+        const arc = await ensureArchiveCategory(guild);
 
-        if (now - last < TICKET_INACTIVITY_MS) continue;
+        await ch.setParent(arc.id).catch(() => {});
+        await ch.setName(`archived-${ch.name}`.slice(0, 90)).catch(() => {});
 
-        // auto-archive
-        const archiveCat = await ensureArchiveCategory(guild);
-        if (!archiveCat) continue;
-
-        await ch.setParent(archiveCat.id).catch(() => {});
-        try {
-          await ch.setName(`archived-${ch.name.slice(0, 90)}`);
-        } catch {}
-
-        DATA.tickets[channelId].archived = true;
+        DATA.tickets[id].archived = true;
         saveData();
       }
-    } catch (e) {
-      console.log("Ticket sweeper error:", e.message);
-    }
-  }, INTERVAL);
+    } catch {}
+  }, 30 * 60 * 1000);
 }
 
-// ----------------- TRANSCRIPT GENERATOR -----------------
+// ================================================================
+// TRANSCRIPT
+// ================================================================
 async function buildTicketTranscript(channel) {
   try {
-    const msgs = await channel.messages.fetch({ limit: 100 }).catch(() => null);
-    if (!msgs || !msgs.size) return "No messages in this ticket.";
+    const msgs = await channel.messages.fetch({ limit: 100 });
+    const sorted = [...msgs.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
-    const sorted = [...msgs.values()].sort(
-      (a, b) => a.createdTimestamp - b.createdTimestamp
-    );
-
-    const lines = sorted.map(m => {
-      const ts = new Date(m.createdTimestamp || Date.now()).toISOString();
-      const author = m.author ? `${m.author.tag} (${m.author.id})` : "Unknown";
-      let content = m.content || "";
-      if (content.length > 300) content = content.slice(0, 297) + "...";
-
-      if (!content && m.embeds?.length) content = "[embed]";
-      if (!content && m.attachments.size) content = "[attachment]";
-
-      return `[${ts}] ${author}: ${content}`;
-    });
-
-    let text = lines.join("\n");
-    if (text.length > 1800) {
-      text = text.slice(0, 1800) + "\n\n[Transcript truncated]";
-    }
-    return text;
-  } catch (e) {
-    console.log("Transcript build error:", e.message);
-    return "Failed to build transcript.";
+    return sorted
+      .map(m => {
+        const ts = new Date(m.createdTimestamp).toISOString();
+        const au = m.author ? `${m.author.tag} (${m.author.id})` : "Unknown";
+        return `[${ts}] ${au}: ${m.content || "[no content]"}`;
+      })
+      .join("\n")
+      .slice(0, 1800);
+  } catch {
+    return "Transcript unavailable.";
   }
 }
 
-// ----------------- TICKET CREATION -----------------
+// ================================================================
+// CREATE TICKET
+// ================================================================
 async function createTicketChannel(interaction, kind) {
   const guild = interaction.guild;
-  if (!guild) {
-    return interaction.reply({ content: "Guild not found.", ephemeral: true });
-  }
-
   const cfg = TICKET_PANEL_CONFIG[interaction.channelId];
-  if (!cfg) {
-    return interaction.reply({ content: "Ticket panel config missing.", ephemeral: true });
-  }
 
-  const categoryName =
-    kind === "partner" ? PARTNERSHIP_CATEGORY_NAME : SUPPORT_CATEGORY_NAME;
+  if (!cfg)
+    return interaction.reply({ content: "Panel misconfigured.", ephemeral: true });
 
-  const cat = await ensureTicketCategory(guild, categoryName);
-  if (!cat) {
-    return interaction.reply({
-      content: "Failed to create or find ticket category.",
-      ephemeral: true
-    });
-  }
+  const catName = kind === "partner" ? PARTNERSHIP_CATEGORY_NAME : SUPPORT_CATEGORY_NAME;
+  const cat = await ensureTicketCategory(guild, catName);
 
-  const safeBase = kind === "partner" ? "partner" : "ticket";
-  const userSlug =
-    interaction.user.username
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "-")
-      .replace(/-+/g, "-")
-      .slice(0, 16) || "user";
+  const safeName =
+    (kind === "partner" ? "partner" : "ticket") +
+    "-" +
+    interaction.user.username.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 16);
 
-  const channelName = `${safeBase}-${userSlug}`;
-
-  let ticketChannel;
+  let ch;
   try {
-    ticketChannel = await guild.channels.create({
-      name: channelName,
-      type: 0, // text
+    ch = await guild.channels.create({
+      name: safeName,
+      type: 0,
       parent: cat.id,
       permissionOverwrites: [
-        {
-          id: guild.roles.everyone,
-          deny: [PermissionFlagsBits.ViewChannel]
-        },
-        {
-          id: interaction.user.id,
-          allow: [
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ReadMessageHistory,
-            PermissionFlagsBits.AttachFiles,
-            PermissionFlagsBits.EmbedLinks
-          ]
-        },
-        {
-          id: client.user.id,
-          allow: [
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ManageMessages,
-            PermissionFlagsBits.ManageChannels
-          ]
-        }
-        // NOTE: if you have a staff role, add it here later for access
-      ],
-      reason: `Ticket created by ${interaction.user.tag} (${interaction.user.id})`
+        { id: guild.roles.everyone, deny: [PermissionFlagsBits.ViewChannel] },
+        { id: interaction.user.id, allow: ["ViewChannel", "SendMessages", "ReadMessageHistory"] },
+        { id: client.user.id, allow: ["ViewChannel", "SendMessages", "ManageChannels"] }
+      ]
     });
-  } catch (e) {
-    console.log("Ticket channel create error:", e.message);
-    return interaction.reply({
-      content: "Failed to create ticket channel.",
-      ephemeral: true
-    });
+  } catch {
+    return interaction.reply({ content: "Failed to create channel.", ephemeral: true });
   }
 
-  // Save ticket info
-  DATA.tickets[ticketChannel.id] = {
+  DATA.tickets[ch.id] = {
     guildId: guild.id,
     ownerId: interaction.user.id,
-    type: kind === "partner" ? "partner" : "support",
-    panelChannelId: interaction.channelId,
+    type: kind,
     transcriptChannelId: cfg.transcriptChannelId,
     createdAt: Date.now(),
     lastActivity: Date.now(),
@@ -844,26 +771,13 @@ async function createTicketChannel(interaction, kind) {
   saveData();
 
   const embed = new EmbedBuilder()
-    .setTitle(
-      kind === "partner" ? "🤝 Partnership Ticket" : "🎫 Support Ticket"
-    )
+    .setTitle(kind === "partner" ? "🤝 Partnership Ticket" : "🎫 Support Ticket")
     .setColor(kind === "partner" ? 0x9b59b6 : 0x3498db)
-    .setDescription(
-      "Thanks for opening a ticket.\n" +
-      "A staff member will be with you as soon as possible."
-    )
+    .setDescription("A staff member will be with you shortly.")
     .addFields(
-      {
-        name: "Opened by",
-        value: `${interaction.user} (\`${interaction.user.id}\`)`
-      },
-      {
-        name: "Type",
-        value: kind === "partner" ? "Partnership" : "Support",
-        inline: true
-      }
-    )
-    .setTimestamp();
+      { name: "Opened by", value: `${interaction.user}` },
+      { name: "Type", value: kind }
+    );
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -872,337 +786,257 @@ async function createTicketChannel(interaction, kind) {
       .setStyle(ButtonStyle.Danger)
   );
 
-  await ticketChannel.send({
-    content: `<@${interaction.user.id}>`,
-    embeds: [embed],
-    components: [row]
-  });
+  await ch.send({ content: `<@${interaction.user.id}>`, embeds: [embed], components: [row] });
 
-  return interaction.reply({
-    content: `Ticket created: ${ticketChannel}`,
-    ephemeral: true
-  });
+  return interaction.reply({ content: `Ticket created: ${ch}`, ephemeral: true });
 }
 
-// ----------------- TICKET CLOSE HANDLER -----------------
+// ================================================================
+// CLOSE TICKET
+// ================================================================
 async function handleTicketClose(interaction) {
   const ch = interaction.channel;
-  if (!ch || ch.type !== 0) {
-    return interaction.reply({ content: "Invalid channel.", ephemeral: true });
-  }
+  const info = DATA.tickets[ch.id];
 
-  const info = DATA.tickets?.[ch.id];
-  if (!info) {
-    return interaction.reply({
-      content: "This channel is not tracked as a ticket.",
-      ephemeral: true
+  if (!info)
+    return interaction.reply({ content: "Not a ticket.", ephemeral: true });
+
+  const transcript = await buildTicketTranscript(ch);
+  const transCh = interaction.guild.channels.cache.get(info.transcriptChannelId);
+
+  if (transCh) {
+    const embed = new EmbedBuilder()
+      .setTitle(`Closed Ticket — ${ch.name}`)
+      .setColor(0x2c3e50)
+      .setDescription(
+        `**Opened by:** <@${info.ownerId}>\n` +
+        `**Closed by:** ${interaction.user}\n` +
+        `**Type:** ${info.type}`
+      );
+
+    await transCh.send({
+      embeds: [embed],
+      files: [{ attachment: Buffer.from(transcript), name: `${ch.name}-transcript.txt` }]
     });
   }
 
-  const guild = interaction.guild;
-  if (!guild) {
-    return interaction.reply({ content: "Guild not found.", ephemeral: true });
-  }
-
-  await interaction.reply({
-    content: "Closing ticket and saving transcript...",
-    ephemeral: true
-  });
-
-  try {
-    const transcriptText = await buildTicketTranscript(ch);
-    const transcriptChannel = guild.channels.cache.get(info.transcriptChannelId);
-
-    if (transcriptChannel) {
-      const embed = new EmbedBuilder()
-        .setTitle(`Ticket Closed — ${ch.name}`)
-        .setColor(0x2c3e50)
-        .setDescription(
-          `**Type:** ${info.type || "Unknown"}\n` +
-          `**Opened by:** <@${info.ownerId}> (\`${info.ownerId}\`)\n` +
-          `**Closed by:** ${interaction.user} (\`${interaction.user.id}\`)\n` +
-          `**Channel ID:** \`${ch.id}\``
-        )
-        .setTimestamp();
-
-      const fileName = `${ch.name.replace(/[^a-z0-9-_]/gi, "_")}-transcript.txt`;
-
-      await transcriptChannel.send({
-        embeds: [embed],
-        files: [
-          {
-            attachment: Buffer.from(transcriptText, "utf8"),
-            name: fileName
-          }
-        ]
-      }).catch(() => {});
-    }
-  } catch (e) {
-    console.log("Ticket close transcript error:", e.message);
-  }
-
-  // cleanup and delete channel
   delete DATA.tickets[ch.id];
   saveData();
 
-  setTimeout(() => {
-    ch.delete("Ticket closed").catch(() => {});
-  }, 2000);
+  await interaction.reply({ content: "Ticket closed.", ephemeral: true });
+  setTimeout(() => ch.delete().catch(() => {}), 2000);
 }
 
-// ----------------- STAFF APPLICATION MODAL -----------------
-// NOTE: Discord modals support max 5 text fields, so some questions are merged.
-function buildStaffApplicationModal() {
-  const modal = new ModalBuilder()
-    .setCustomId("staff_app_modal")
-    .setTitle("Staff Application");
+// ================================================================
+// STAFF APPLICATION — 3 PAGE SYSTEM
+// ================================================================
+function buildStaffAppPage1() {
+  const m = new ModalBuilder()
+    .setCustomId("staff_app_page1")
+    .setTitle("Staff Application — Page 1");
 
-  const q1 = new TextInputBuilder()
-    .setCustomId("q1_basic")
-    .setLabel("Region, IGN, Age & Timezone")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true);
-
-  const q2 = new TextInputBuilder()
-    .setCustomId("q2_discover")
-    .setLabel("When did you discover server & what do you like?")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true);
-
-  const q3 = new TextInputBuilder()
-    .setCustomId("q3_experience")
-    .setLabel("Previous staff experience?")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true);
-
-  const q4 = new TextInputBuilder()
-    .setCustomId("q4_strengths")
-    .setLabel("Strengths, weaknesses & daily activity?")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true);
-
-  const q5 = new TextInputBuilder()
-    .setCustomId("q5_moderation")
-    .setLabel("Moderation ability, skills, why apply & anything else")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(true);
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(q1),
-    new ActionRowBuilder().addComponents(q2),
-    new ActionRowBuilder().addComponents(q3),
-    new ActionRowBuilder().addComponents(q4),
-    new ActionRowBuilder().addComponents(q5)
+  m.addComponents(
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("region_age")
+        .setLabel("Region, IGN, Age, Timezone")
+        .setStyle(TextInputStyle.Paragraph)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("discover_like")
+        .setLabel("When did you discover server & what do you like?")
+        .setStyle(TextInputStyle.Paragraph)
+    )
   );
 
-  return modal;
+  return m;
 }
 
-// ----------------- STAFF APPLICATION EMBED + ROUTE -----------------
-async function handleStaffApplicationSubmit(interaction) {
-  const panelCfg = TICKET_PANEL_CONFIG[interaction.channelId];
-  if (!panelCfg || !panelCfg.applicationChannelId) {
-    return interaction.reply({
-      content: "No application channel configured for here.",
-      ephemeral: true
-    });
+function buildStaffAppPage2() {
+  const m = new ModalBuilder()
+    .setCustomId("staff_app_page2")
+    .setTitle("Staff Application — Page 2");
+
+  m.addComponents(
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("experience")
+        .setLabel("Previous experience?")
+        .setStyle(TextInputStyle.Paragraph)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("strengths")
+        .setLabel("Strengths, weaknesses, activity")
+        .setStyle(TextInputStyle.Paragraph)
+    )
+  );
+
+  return m;
+}
+
+function buildStaffAppPage3() {
+  const m = new ModalBuilder()
+    .setCustomId("staff_app_page3")
+    .setTitle("Staff Application — Page 3");
+
+  m.addComponents(
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("moderation_skills")
+        .setLabel("Moderation skills & why apply")
+        .setStyle(TextInputStyle.Paragraph)
+    )
+  );
+
+  return m;
+}
+
+async function startStaffApplication(interaction) {
+  return interaction.showModal(buildStaffAppPage1());
+}
+
+async function handleStaffAppPages(interaction) {
+  const uid = interaction.user.id;
+
+  if (interaction.customId === "staff_app_page1") {
+    DATA.partialStaffApps ??= {};
+    DATA.partialStaffApps[uid] = {
+      region_age: interaction.fields.getTextInputValue("region_age"),
+      discover_like: interaction.fields.getTextInputValue("discover_like")
+    };
+    saveData();
+    return interaction.showModal(buildStaffAppPage2());
   }
 
-  const appChannel = interaction.guild.channels.cache.get(
-    panelCfg.applicationChannelId
-  );
-  if (!appChannel) {
-    return interaction.reply({
-      content: "Application review channel not found.",
-      ephemeral: true
-    });
+  if (interaction.customId === "staff_app_page2") {
+    const d = DATA.partialStaffApps?.[uid];
+    if (!d) return interaction.reply({ content: "Expired.", ephemeral: true });
+
+    d.experience = interaction.fields.getTextInputValue("experience");
+    d.strengths = interaction.fields.getTextInputValue("strengths");
+    saveData();
+    return interaction.showModal(buildStaffAppPage3());
   }
 
-  const ans1 = interaction.fields.getTextInputValue("q1_basic");
-  const ans2 = interaction.fields.getTextInputValue("q2_discover");
-  const ans3 = interaction.fields.getTextInputValue("q3_experience");
-  const ans4 = interaction.fields.getTextInputValue("q4_strengths");
-  const ans5 = interaction.fields.getTextInputValue("q5_moderation");
+  if (interaction.customId === "staff_app_page3") {
+    const d = DATA.partialStaffApps?.[uid];
+    if (!d) return interaction.reply({ content: "Expired.", ephemeral: true });
 
-  const user = interaction.user;
+    d.moderation = interaction.fields.getTextInputValue("moderation_skills");
 
-  const embed = new EmbedBuilder()
-    .setTitle(`🛡 Staff Application — ${user.tag}`)
-    .setColor(0x00b894)
-    .setDescription(
-      "A new staff application has been submitted.\n" +
-      "Review carefully before accepting or denying."
-    )
-    .addFields(
-      {
-        name: "1. Region, IGN, Age & Timezone",
-        value: ans1.slice(0, 1024)
-      },
-      {
-        name: "2. When did you discover the server & what do you like?",
-        value: ans2.slice(0, 1024)
-      },
-      {
-        name: "3. Previous staff experience",
-        value: ans3.slice(0, 1024)
-      },
-      {
-        name: "4. Strengths, weaknesses & daily activity",
-        value: ans4.slice(0, 1024)
-      },
-      {
-        name: "5. Moderation ability, skills, why apply & anything else",
-        value: ans5.slice(0, 1024)
-      },
-      {
-        name: "Applicant",
-        value: `${user} (\`${user.id}\`)`
-      }
-    )
-    .setTimestamp();
+    const cfg = TICKET_PANEL_CONFIG[interaction.channelId];
+    const appChannel = interaction.guild.channels.cache.get(cfg.applicationChannelId);
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`staff_app_decide_accept:${user.id}`)
-      .setLabel("✅ Accept")
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId(`staff_app_decide_deny:${user.id}`)
-      .setLabel("❌ Deny")
-      .setStyle(ButtonStyle.Danger)
-  );
+    const embed = new EmbedBuilder()
+      .setTitle(`🛡 Staff Application — ${interaction.user.tag}`)
+      .setColor(0x00b894)
+      .addFields(
+        { name: "Region/Age/IGN/Timezone", value: d.region_age },
+        { name: "Discovered & Liked", value: d.discover_like },
+        { name: "Experience", value: d.experience },
+        { name: "Strengths/Weaknesses", value: d.strengths },
+        { name: "Moderation", value: d.moderation },
+        { name: "Applicant", value: `${interaction.user}` }
+      );
 
-  await appChannel.send({ embeds: [embed], components: [row] });
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`staff_app_decide_accept:${uid}`)
+        .setLabel("✅ Accept")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(`staff_app_decide_deny:${uid}`)
+        .setLabel("❌ Deny")
+        .setStyle(ButtonStyle.Danger)
+    );
 
-  return interaction.reply({
-    content: "Your staff application has been submitted successfully.",
-    ephemeral: true
-  });
+    await appChannel.send({ embeds: [embed], components: [row] });
+
+    delete DATA.partialStaffApps[uid];
+    saveData();
+
+    return interaction.reply({ content: "Application submitted!", ephemeral: true });
+  }
 }
 
-// ----------------- STAFF APPLICATION DECISION FLOW -----------------
+// ================================================================
+// DECISION FLOW
+// ================================================================
 async function handleStaffAppDecisionButton(interaction) {
-  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild)) {
-    return interaction.reply({
-      content: "You don't have permission to handle applications.",
-      ephemeral: true
-    });
-  }
+  if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild))
+    return interaction.reply({ content: "No perms.", ephemeral: true });
 
-  const [prefix, actionRaw] = interaction.customId.split("staff_app_decide_");
-  const [action, targetId] = (actionRaw || "").split(":");
-  if (!action || !targetId) {
-    return interaction.reply({
-      content: "Invalid application button.",
-      ephemeral: true
-    });
-  }
+  const [_, raw] = interaction.customId.split("staff_app_decide_");
+  const [action, targetId] = raw.split(":");
 
   const modal = new ModalBuilder()
     .setCustomId(`staff_app_modal_decide:${action}:${targetId}:${interaction.message.id}`)
-    .setTitle(
-      action === "accept" ? "Reason for Accepting" : "Reason for Denying"
-    );
-
-  const reasonInput = new TextInputBuilder()
-    .setCustomId("staff_app_decide_reason")
-    .setLabel("Reason (will be sent in DM)")
-    .setStyle(TextInputStyle.Paragraph)
-    .setRequired(false);
+    .setTitle(action === "accept" ? "Accept Reason" : "Deny Reason");
 
   modal.addComponents(
-    new ActionRowBuilder().addComponents(reasonInput)
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId("staff_app_decide_reason")
+        .setLabel("Reason (DM to applicant)")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+    )
   );
 
   return interaction.showModal(modal);
 }
 
 async function handleStaffAppDecisionModal(interaction) {
-  const [prefix, action, targetId, messageId] =
-    interaction.customId.split(":");
-  if (!action || !targetId || !messageId) return;
+  const [_, action, targetId, messageId] = interaction.customId.split(":");
 
   const reason =
     interaction.fields.getTextInputValue("staff_app_decide_reason") ||
-    "No specific reason was provided.";
+    "No reason provided.";
 
-  let targetUser = null;
   try {
-    targetUser = await client.users.fetch(targetId);
+    const user = await client.users.fetch(targetId);
+    await user.send(
+      action === "accept"
+        ? `🎉 You were **ACCEPTED**!\nReason: ${reason}`
+        : `❌ You were **DENIED**.\nReason: ${reason}`
+    );
   } catch {}
 
-  // DM USER
-  if (targetUser) {
-    try {
-      if (action === "accept") {
-        await targetUser.send(
-          `🎉 Your Staff Application Has Been Accepted!\n\n` +
-          `**Reason:** ${reason}\n\n` +
-          `A staff member will DM you shortly with next steps.`
-        );
-      } else {
-        await targetUser.send(
-          `❌ Your Staff Application Has Been Denied.\n\n` +
-          `**Reason:** ${reason}\n\n` +
-          `You may be able to re-apply in the future depending on server rules.`
-        );
-      }
-    } catch (e) {
-      console.log("Staff app DM error:", e.message);
-    }
-  }
-
-  // edit original application message
   try {
-    const ch = interaction.channel;
-    if (ch && ch.isTextBased && messageId) {
-      const msg = await ch.messages.fetch(messageId).catch(() => null);
-      if (msg) {
-        const oldEmbed = msg.embeds[0];
-        const newEmbed = EmbedBuilder.from(oldEmbed || new EmbedBuilder());
+    const msg = await interaction.channel.messages.fetch(messageId);
+    const old = msg.embeds[0];
+    const e = EmbedBuilder.from(old);
 
-        newEmbed.addFields({
-          name: "Status",
-          value:
-            action === "accept"
-              ? `✅ Accepted by ${interaction.user} (\`${interaction.user.id}\`)\n**Reason:** ${reason}`
-              : `❌ Denied by ${interaction.user} (\`${interaction.user.id}\`)\n**Reason:** ${reason}`
-        });
+    e.addFields({
+      name: "Status",
+      value:
+        action === "accept"
+          ? `✅ Accepted by ${interaction.user}\nReason: ${reason}`
+          : `❌ Denied by ${interaction.user}\nReason: ${reason}`
+    });
 
-        const row = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId("staff_app_decide_disabled_accept")
-            .setLabel("✅ Accept")
-            .setStyle(ButtonStyle.Success)
-            .setDisabled(true),
-          new ButtonBuilder()
-            .setCustomId("staff_app_decide_disabled_deny")
-            .setLabel("❌ Deny")
-            .setStyle(ButtonStyle.Danger)
-            .setDisabled(true)
-        );
-
-        await msg.edit({ embeds: [newEmbed], components: [row] });
-      }
-    }
-  } catch (e) {
-    console.log("Staff app message edit error:", e.message);
-  }
+    await msg.edit({
+      embeds: [e],
+      components: [
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setLabel("Accepted").setStyle(ButtonStyle.Success).setDisabled(true),
+          new ButtonBuilder().setLabel("Denied").setStyle(ButtonStyle.Danger).setDisabled(true)
+        )
+      ]
+    });
+  } catch {}
 
   return interaction.reply({
-    content:
-      action === "accept"
-        ? "Application marked as **ACCEPTED** and user has been DM'd."
-        : "Application marked as **DENIED** and user has been DM'd.",
+    content: action === "accept" ? "Marked accepted!" : "Marked denied!",
     ephemeral: true
   });
 }
 
-// ===================================================================
-// 🧷 HOOKS — READY / INTERACTIONS / MESSAGE ACTIVITY
-// ===================================================================
-
-// Extra ready hook just for tickets (works alongside your existing one)
+// ================================================================
+// READY EVENT FOR TICKET SYSTEM
+// ================================================================
 client.on("ready", async () => {
   try {
     for (const guild of client.guilds.cache.values()) {
@@ -1215,74 +1049,74 @@ client.on("ready", async () => {
   }
 });
 
-// Buttons + a bit of modals
+// ================================================================
+// INTERACTION HANDLER — BUTTONS + MODALS
+// ================================================================
 client.on("interactionCreate", async (interaction) => {
   try {
-    // BUTTONS
+    // ===================== BUTTONS =====================
     if (interaction.isButton()) {
       const id = interaction.customId;
 
-      // Ticket open buttons
+      // SUPPORT TICKET
       if (id === "ticket_support_open") {
-        const cfg = TICKET_PANEL_CONFIG[interaction.channelId];
-        if (!cfg) return interaction.reply({ content: "This channel is not configured as a ticket panel.", ephemeral: true });
-
-        // support ticket from both support-only & multi
         return createTicketChannel(interaction, "support");
       }
 
+      // PARTNERSHIP TICKET
       if (id === "ticket_partner_open") {
-        const cfg = TICKET_PANEL_CONFIG[interaction.channelId];
-        if (!cfg || cfg.type !== "multi") {
-          return interaction.reply({
-            content: "Partnership tickets are not available here.",
-            ephemeral: true
-          });
-        }
         return createTicketChannel(interaction, "partner");
       }
 
+      // STAFF APPLICATION
       if (id === "ticket_staff_apply") {
         const cfg = TICKET_PANEL_CONFIG[interaction.channelId];
         if (!cfg || cfg.type !== "multi") {
           return interaction.reply({
-            content: "Staff applications are not available here.",
+            content: "Staff applications not available here.",
             ephemeral: true
           });
         }
-        const modal = buildStaffApplicationModal();
-        return interaction.showModal(modal);
+        return startStaffApplication(interaction);
       }
 
-      if (id === "ticket_close") {
-        return handleTicketClose(interaction);
-      }
-
+      // DECISION BUTTONS
       if (id.startsWith("staff_app_decide_")) {
         return handleStaffAppDecisionButton(interaction);
       }
 
-      // ignore other buttons (panel/teams etc)
+      // CLOSE TICKET
+      if (id === "ticket_close") {
+        return handleTicketClose(interaction);
+      }
     }
 
-    // MODAL SUBMIT — only handle our staff app modal decide here
+    // ===================== MODALS =====================
     if (interaction.isModalSubmit()) {
-      if (interaction.customId === "staff_app_modal") {
-        return handleStaffApplicationSubmit(interaction);
+      if (
+        interaction.customId === "staff_app_page1" ||
+        interaction.customId === "staff_app_page2" ||
+        interaction.customId === "staff_app_page3"
+      ) {
+        return handleStaffAppPages(interaction);
       }
+
       if (interaction.customId.startsWith("staff_app_modal_decide:")) {
         return handleStaffAppDecisionModal(interaction);
       }
     }
   } catch (e) {
-    console.log("Ticket interaction error:", e.message);
+    console.log("Interaction error:", e.message);
   }
 });
 
-// Track last activity time in ticket channels
+// ================================================================
+// MESSAGE ACTIVITY TRACKER
+// ================================================================
 client.on("messageCreate", (msg) => {
   try {
     if (!DATA.tickets) return;
+
     const info = DATA.tickets[msg.channel.id];
     if (!info) return;
 
@@ -1292,7 +1126,6 @@ client.on("messageCreate", (msg) => {
     console.log("Ticket activity error:", e.message);
   }
 });
-
 
 // ----------------- TEAM BUTTON LOGIC -----------------
 client.on("interactionCreate", async interaction => {
@@ -2542,6 +2375,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
