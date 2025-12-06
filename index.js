@@ -1212,27 +1212,41 @@ async function handleStaffAppPages(interaction) {
     });
   }
 
-  // PAGE 1 -> store partial & go to page 2
+  // PAGE 1 SUBMIT → SAVE + SHOW BUTTON TO CONTINUE
   if (interaction.customId === "staff_app_page1") {
     DATA.partialStaffApps[uid] = {
       region_age: clean(interaction.fields.getTextInputValue("region_age")),
       discover_like: clean(interaction.fields.getTextInputValue("discover_like")),
       experience: clean(interaction.fields.getTextInputValue("experience")),
-      strengths_weaknesses: clean(
-        interaction.fields.getTextInputValue("strengths_weaknesses")
-      ),
+      strengths_weaknesses: clean(interaction.fields.getTextInputValue("strengths_weaknesses")),
       activity: clean(interaction.fields.getTextInputValue("activity"))
     };
     saveData();
+
+    return interaction.reply({
+      content: "Page 1 submitted. Click below to continue to Page 2.",
+      ephemeral: true,
+      components: [
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId("staff_app_continue_p2")
+            .setLabel("➡️ Continue to Page 2")
+            .setStyle(ButtonStyle.Primary)
+        )
+      ]
+    });
+  }
+
+  // PAGE 2 MODAL OPENED WHEN USER CLICKS BUTTON
+  if (interaction.customId === "staff_app_continue_p2") {
     return interaction.showModal(buildStaffAppPage2());
   }
 
-  // PAGE 2 -> final submit
+  // PAGE 2 SUBMIT → FINAL APPLICATION
   if (interaction.customId === "staff_app_page2") {
     const d = DATA.partialStaffApps[uid] || {};
-    d.moderation_capable = clean(
-      interaction.fields.getTextInputValue("moderation_capable")
-    );
+
+    d.moderation_capable = clean(interaction.fields.getTextInputValue("moderation_capable"));
     d.skills = clean(interaction.fields.getTextInputValue("skills"));
     d.why_apply = clean(interaction.fields.getTextInputValue("why_apply"));
     d.extra = clean(interaction.fields.getTextInputValue("extra"));
@@ -1285,6 +1299,7 @@ async function handleStaffAppPages(interaction) {
     });
   }
 }
+
 
 // ================================================================
 // STAFF APPLICATION — DECISION FLOW
@@ -2662,6 +2677,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
