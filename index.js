@@ -1517,7 +1517,12 @@ client.on("messageCreate", (msg) => {
 // ----------------- TEAM MODAL HANDLING -----------------
 client.on("interactionCreate", async (interaction) => {
   try {
+    // ⛔ STOP this handler if it's NOT team modals
     if (!interaction.isModalSubmit()) return;
+
+    // ⛔ STOP staff app modals from entering this handler
+    if (interaction.customId.startsWith("staff_app_")) return;
+
 
     // TEAM REGISTER MODAL
     if (interaction.customId === "team_modal") {
@@ -1605,6 +1610,9 @@ client.on("interactionCreate", async (interaction) => {
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isCommand()) return;
+
+    // ⛔ prevent slash handler from touching your staff_app_continue_p2 button
+
 
     const cmd = interaction.commandName;
     const hasPerm = (perm) => {
@@ -2679,6 +2687,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
