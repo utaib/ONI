@@ -1093,6 +1093,7 @@ function startTicketSweeper() {
       console.log("Ticket sweeper error:", e.message);
     }
   }, 60 * 60 * 1000); // every 1 hour
+}
 // ================================================================
 // STAFF APPLICATION — SINGLE PAGE (5 FIELDS) — FINAL VERSION
 // ================================================================
@@ -2615,6 +2616,7 @@ client
     console.error("Login failed:", err.message);
     process.exit(1);
   });
+
 
 
 
